@@ -1,181 +1,143 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#070807" />
-  <meta name="description" content="Blackstone Signature Properties — broker-led East Bay real estate, investment and property management." />
-  <title>Blackstone Signature Properties</title>
-  <link rel="preconnect" href="https://images.unsplash.com" />
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#050505">
+  <meta name="description" content="Blackstone Signature Properties & Investments — broker-led East Bay real estate, investments and property management.">
+  <title>Blackstone Signature Properties & Investments</title>
+  <link rel="preconnect" href="https://images.unsplash.com">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="noise" aria-hidden="true"></div>
-
-  <header class="site-header" id="top">
-    <a class="brand" href="#top" aria-label="Blackstone Signature Properties home">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 64 64" role="img"><path d="M7 47 31.7 8 57 47H7Z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M18 47 32 25l14 22M25 47l7-11 7 11" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="32" cy="14" r="2.8" fill="currentColor"/></svg>
-      </span>
-      <span class="brand-copy"><strong>BLACKSTONE</strong><small>Signature Properties</small></span>
+  <header class="topbar">
+    <a href="#top" class="logo-link" aria-label="Blackstone home">
+      <img src="assets/blackstone-logo.jpg" alt="Blackstone Signature Properties and Investments">
     </a>
-
-    <nav class="desktop-nav" aria-label="Primary navigation">
-      <a href="#services">Services</a>
-      <a href="#search">Search</a>
-      <a href="#about">About</a>
-      <a href="#contact">Contact</a>
-    </nav>
-
-    <div class="header-actions">
-      <button class="ghost-btn" id="openAiTop">Ask Blackstone AI</button>
-      <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="mobileNav">Menu</button>
+    <div class="top-contact">
+      <a href="tel:+19259175595"><span>Call / Text</span><strong>(925) 917-5595</strong></a>
+      <a href="mailto:sal@blackstonesignatureproperty.com"><span>Email</span><strong>sal@blackstonesignatureproperty.com</strong></a>
+      <a class="gold-outline" href="#contact">Schedule a Call</a>
     </div>
+    <button class="menu-toggle" id="menuToggle" aria-expanded="false">Menu</button>
   </header>
 
-  <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation" hidden>
-    <a href="#services">Services</a>
-    <a href="#search">Search Homes</a>
-    <a href="#about">About Sal</a>
+  <nav class="mainnav" id="mainnav" aria-label="Main navigation">
+    <a href="#top" class="active">Home</a>
+    <a href="#properties">Buy</a>
+    <a href="#sell">Sell</a>
+    <a href="#tools">Invest</a>
+    <a href="#management">Property Management</a>
+    <a href="#about">About</a>
+    <a href="#resources">Resources</a>
     <a href="#contact">Contact</a>
   </nav>
 
-  <main>
+  <main id="top">
     <section class="hero">
-      <div class="hero-bg" aria-hidden="true"></div>
-      <div class="hero-shade" aria-hidden="true"></div>
-      <div class="hero-content reveal">
-        <p class="eyebrow">East Bay Real Estate · Broker-Owned & Operated</p>
-        <h1><span>Elevated</span> Real Estate.<br />Personal Representation.</h1>
-        <p class="hero-sub">A search-first real estate experience backed by 20+ years of brokerage, investment and property-management expertise.</p>
-        <div class="hero-cta">
-          <a class="primary-btn" href="#search">Search Homes</a>
-          <a class="outline-btn" href="#services">Property Management</a>
+      <div class="hero-overlay"></div>
+      <div class="hero-copy reveal">
+        <p class="eyebrow">East Bay Real Estate Experts</p>
+        <h1>Luxury Real Estate.<br><span>AI-Powered.</span><br>Broker-Led.</h1>
+        <p>Buy, sell, invest or lease with confidence across Discovery Bay, Brentwood, Oakley, Antioch, Concord and the entire East Bay.</p>
+        <div class="hero-actions">
+          <a class="gold-btn" href="#properties">Search Homes</a>
+          <button class="dark-btn" data-open-tool="valuation">Home Value</button>
+          <a class="dark-btn" href="#management">Property Management</a>
+          <button class="dark-btn" id="openAIHero">Talk to AI Concierge</button>
         </div>
       </div>
 
-      <div class="hero-float reveal delay-1">
-        <div><span class="metric-number" data-target="300">0</span><small>Homes Sold</small></div>
-        <div><span class="metric-number" data-target="20">0</span><small>Years Experience</small></div>
-        <div><span>24/7</span><small>AI Concierge</small></div>
-      </div>
-
-      <a class="scroll-cue" href="#services" aria-label="Scroll to services"><span></span></a>
-    </section>
-
-    <section class="statement reveal">
-      <p class="eyebrow">Luxury service. Modern technology.</p>
-      <h2>Resolve more, sell smarter, and make every real-estate decision count.</h2>
-      <p>Blackstone combines local market knowledge, hands-on broker guidance and intelligent tools to help buyers, sellers, investors and property owners move with confidence.</p>
-    </section>
-
-    <section class="services" id="services">
-      <article class="service-card reveal">
-        <span class="service-index">01</span>
-        <div class="service-media media-buy"></div>
-        <div class="service-body"><p class="eyebrow">Buy</p><h3>Find the right home faster.</h3><p>Curated East Bay searches, private tours, offer strategy and negotiation led by an experienced broker.</p><a href="#search">Start your search →</a></div>
-      </article>
-      <article class="service-card reveal delay-1">
-        <span class="service-index">02</span>
-        <div class="service-media media-sell"></div>
-        <div class="service-body"><p class="eyebrow">Sell</p><h3>Position your home to win.</h3><p>Pricing strategy, premium presentation, targeted marketing and hands-on transaction management.</p><a href="#contact">Request a home review →</a></div>
-      </article>
-      <article class="service-card reveal delay-2">
-        <span class="service-index">03</span>
-        <div class="service-media media-manage"></div>
-        <div class="service-body"><p class="eyebrow">Manage</p><h3>Property management without the guesswork.</h3><p>Tenant placement, rent coordination, maintenance oversight and transparent owner communication.</p><a href="#contact">Get a management proposal →</a></div>
-      </article>
-    </section>
-
-    <section class="search-panel" id="search">
-      <div class="search-copy reveal">
-        <p class="eyebrow">Search East Bay homes</p>
-        <h2>Tell us what home feels right.</h2>
-        <p>Use the quick search below. When your IDX connection is ready, this section can display live MLS results.</p>
-      </div>
-      <form class="property-search reveal delay-1" id="propertySearch">
-        <label>Location<input type="text" name="location" placeholder="City, ZIP or neighborhood" /></label>
-        <label>Price<select name="price"><option>Any price</option><option>Under $700,000</option><option>$700,000–$900,000</option><option>$900,000–$1.25M</option><option>$1.25M+</option></select></label>
-        <label>Beds<select name="beds"><option>Any beds</option><option>2+</option><option>3+</option><option>4+</option><option>5+</option></select></label>
-        <label>Property type<select name="type"><option>All homes</option><option>Single family</option><option>Condo / townhome</option><option>Waterfront</option><option>Investment</option></select></label>
-        <button class="primary-btn wide" type="submit">Find Matching Homes</button>
-      </form>
-    </section>
-
-    <section class="ai-section">
-      <div class="ai-visual reveal">
-        <div class="orb"><span></span><span></span><span></span><div class="orb-core">B</div></div>
-      </div>
-      <div class="ai-copy reveal delay-1">
-        <p class="eyebrow">Blackstone AI Concierge</p>
-        <h2>Ask naturally. Get a clear next step.</h2>
-        <p>Visitors can ask about buying, selling, investment opportunities or property management. The assistant can qualify the request, collect contact information and route the lead to you.</p>
-        <div class="prompt-chips">
-          <button data-prompt="Show me waterfront homes in Discovery Bay under $900,000.">Waterfront homes under $900K</button>
-          <button data-prompt="What is my home worth?">Estimate my home value</button>
-          <button data-prompt="I need property management for my rental.">Property management help</button>
+      <aside class="ai-panel reveal delay-1" id="aiPanel" aria-label="Blackstone AI Concierge">
+        <div class="ai-panel-head">
+          <img src="assets/blackstone-logo.jpg" alt="">
+          <div><strong>BLACKSTONE</strong><span>AI Concierge · Online 24/7</span></div>
+          <button id="closeAIPanel" aria-label="Close">×</button>
         </div>
-        <button class="primary-btn" id="openAiMain">Talk to Blackstone AI</button>
+        <div class="ai-message">Hi! I’m Blackstone AI Concierge. How can I help you today?</div>
+        <div class="ai-quick">
+          <button data-ai="Help me search for homes in the East Bay.">⌕ Search for Homes</button>
+          <button data-ai="What is my home worth?">$ What’s My Home Worth?</button>
+          <button data-ai="I want to sell my home.">◆ I Want to Sell My Home</button>
+          <button data-ai="I need property management.">▦ Property Management</button>
+          <button data-ai="Schedule a showing.">▣ Schedule a Showing</button>
+          <button data-ai="Analyze an investment property.">↗ Investment Property Analysis</button>
+        </div>
+        <div id="aiChat" class="ai-chat" aria-live="polite"></div>
+        <div class="ai-entry"><input id="aiInput" placeholder="Type a message..."><button id="aiSend">➤</button></div>
+        <small>Demo concierge. Connect Gemini/OpenAI and your CRM for live AI responses.</small>
+      </aside>
+    </section>
+
+    <section class="stats reveal" aria-label="Experience statistics">
+      <div><b>300+</b><span>Homes Sold</span><small>and counting</small></div>
+      <div><b>20+</b><span>Years Experience</span><small>in real estate</small></div>
+      <div><b>5 Star</b><span>Client Service</span><small>broker-led guidance</small></div>
+      <div><b>East Bay</b><span>Local Experts</span><small>specialized knowledge</small></div>
+    </section>
+
+    <section class="section" id="properties">
+      <div class="section-head reveal"><div><p class="eyebrow">Featured Properties</p><h2>Homes selected for your lifestyle.</h2></div><button id="viewAllProperties">View all properties →</button></div>
+      <div class="property-grid">
+        <article class="property-card reveal"><div class="property-img p1"><span>Waterfront</span><button>♡</button></div><div class="property-copy"><h3>$1,249,000</h3><p>Discovery Bay Waterfront</p><small>4 BD · 3 BA · 2,812 SF</small></div></article>
+        <article class="property-card reveal delay-1"><div class="property-img p2"><span>New Listing</span><button>♡</button></div><div class="property-copy"><h3>$899,000</h3><p>Brentwood Executive Home</p><small>5 BD · 3 BA · 2,650 SF</small></div></article>
+        <article class="property-card reveal delay-2"><div class="property-img p3"><span>Luxury</span><button>♡</button></div><div class="property-copy"><h3>$1,799,000</h3><p>Discovery Bay Custom Estate</p><small>4 BD · 3.5 BA · 3,489 SF</small></div></article>
+      </div>
+      <div class="disclaimer">Sample listings shown for design demonstration. Connect Bridge MLS/IDX to display live properties.</div>
+    </section>
+
+    <section class="section tools" id="tools">
+      <div class="section-head reveal"><div><p class="eyebrow">Powerful Real Estate Tools</p><h2>Make your next move with clarity.</h2></div></div>
+      <div class="tool-grid">
+        <button class="tool-card reveal" data-open-tool="valuation"><b>⌂</b><strong>AI Home Valuation</strong><span>Request an instant estimate</span></button>
+        <button class="tool-card reveal delay-1" data-open-tool="mortgage"><b>▦</b><strong>Mortgage Calculator</strong><span>Estimate monthly payments</span></button>
+        <button class="tool-card reveal delay-2" data-open-tool="buyrent"><b>⚖</b><strong>Buy vs. Rent Analyzer</strong><span>Compare both options</span></button>
+        <button class="tool-card reveal" data-open-tool="investment"><b>↗</b><strong>Investment Analyzer</strong><span>Estimate cash flow</span></button>
+        <button class="tool-card reveal delay-1" data-open-tool="market"><b>▥</b><strong>Market Reports</strong><span>East Bay market insights</span></button>
+        <button class="tool-card reveal delay-2" data-open-tool="flip"><b>⌂</b><strong>Property Flip Analyzer</strong><span>Analyze a potential flip</span></button>
       </div>
     </section>
 
-    <section class="about" id="about">
+    <section class="split" id="sell">
+      <div class="split-image sell-image reveal"></div>
+      <div class="split-copy reveal delay-1"><p class="eyebrow">Sell with confidence</p><h2>Present your home at its absolute best.</h2><p>Strategic pricing, luxury presentation, digital marketing, negotiation and transaction oversight—led personally by an experienced broker.</p><ul><li>Pricing and market-position review</li><li>Photography and property presentation</li><li>Targeted digital and social marketing</li><li>Offer analysis and negotiation</li></ul><a class="gold-btn" href="#contact">Request a Seller Consultation</a></div>
+    </section>
+
+    <section class="split reverse" id="management">
+      <div class="split-image manage-image reveal"></div>
+      <div class="split-copy reveal delay-1"><p class="eyebrow">Property Management</p><h2>Protect the property. Simplify ownership.</h2><p>Professional tenant placement, rent coordination, maintenance oversight and clear owner communication throughout the East Bay.</p><ul><li>Marketing and tenant screening</li><li>Lease preparation and move-in coordination</li><li>Maintenance and vendor management</li><li>Owner statements and communication</li></ul><a class="gold-btn" href="#contact">Get a Free Management Review</a></div>
+    </section>
+
+    <section class="about section" id="about">
       <div class="about-photo reveal"></div>
-      <div class="about-copy reveal delay-1">
-        <p class="eyebrow">Broker / Owner</p>
-        <h2>Experience that stays personal.</h2>
-        <p>Sal Gharibyar brings more than two decades of real-estate experience across residential sales, investments, flips and property management throughout the East Bay.</p>
-        <div class="credentials">
-          <div><strong>20+</strong><span>Years in real estate</span></div>
-          <div><strong>300+</strong><span>Homes sold</span></div>
-          <div><strong>01418692</strong><span>California DRE</span></div>
-        </div>
-        <a class="outline-btn" href="#contact">Schedule a consultation</a>
-      </div>
+      <div class="about-copy reveal delay-1"><p class="eyebrow">Broker / Owner</p><h2>Experience that stays personal.</h2><p>Sal Gharibyar brings more than two decades of experience across residential sales, investments, flips and property management throughout California’s East Bay.</p><div class="credential-grid"><div><b>20+</b><span>Years in real estate</span></div><div><b>300+</b><span>Homes sold</span></div><div><b>01418692</b><span>California DRE</span></div></div><a class="dark-btn" href="#contact">Schedule a Consultation</a></div>
     </section>
 
-    <section class="contact" id="contact">
-      <div class="contact-copy reveal">
-        <p class="eyebrow">Let’s talk</p>
-        <h2>Your next move starts with one conversation.</h2>
-        <p>Tell us what you are planning and we’ll respond with practical next steps.</p>
-      </div>
-      <form class="contact-form reveal delay-1" id="leadForm">
-        <label>Name<input required type="text" name="name" placeholder="Your full name" /></label>
-        <label>Email<input required type="email" name="email" placeholder="you@email.com" /></label>
-        <label>Phone<input type="tel" name="phone" placeholder="(925) 555-1234" /></label>
-        <label>How can we help?<select name="interest"><option>Buying a home</option><option>Selling a home</option><option>Property management</option><option>Investment property</option><option>Other</option></select></label>
-        <label class="full">Message<textarea name="message" rows="4" placeholder="Tell us a little about your plans"></textarea></label>
-        <button class="primary-btn wide" type="submit">Send Request</button>
-        <p class="form-status" id="formStatus" role="status"></p>
-      </form>
+    <section class="trust" id="resources">
+      <p>Trusted visibility across</p><div><span>Zillow</span><span>Google</span><span>Yelp</span><span>Facebook</span><span>MLS</span></div>
+    </section>
+
+    <section class="contact section" id="contact">
+      <div class="contact-copy reveal"><p class="eyebrow">Let’s Talk</p><h2>Your next move starts with one conversation.</h2><p>Tell us what you are planning and we’ll respond with practical next steps.</p><a href="tel:+19259175595">(925) 917-5595</a><a href="mailto:sal@blackstonesignatureproperty.com">sal@blackstonesignatureproperty.com</a></div>
+      <form id="leadForm" class="lead-form reveal delay-1"><label>Name<input name="name" required></label><label>Email<input name="email" type="email" required></label><label>Phone<input name="phone" type="tel"></label><label>Interest<select name="interest"><option>Buying</option><option>Selling</option><option>Property Management</option><option>Investment</option></select></label><label class="full">Message<textarea name="message" rows="4"></textarea></label><button class="gold-btn full" type="submit">Send Request</button><p id="formStatus" class="full"></p></form>
     </section>
   </main>
 
-  <footer class="site-footer">
-    <div class="footer-brand">
-      <strong>BLACKSTONE</strong><span>Signature Properties</span>
-      <p>Broker-led real estate, investments and property management across California’s East Bay.</p>
-    </div>
-    <div><h4>Explore</h4><a href="#search">Search Homes</a><a href="#services">Property Management</a><a href="#about">About</a></div>
-    <div><h4>Contact</h4><a href="tel:+19259175595">(925) 917-5595</a><a href="mailto:sal@blackstonesignatureproperty.com">sal@blackstonesignatureproperty.com</a><span>Discovery Bay, California</span></div>
-    <div class="legal"><p>Blackstone Signature Properties is a DBA of Eagle Rock Ventures, Inc.</p><p>Broker/Owner Sal Gharibyar · DRE #01418692 · Corp DRE #02117470</p><p>© <span id="year"></span> Blackstone Signature Properties.</p></div>
+  <footer>
+    <img src="assets/blackstone-logo.jpg" alt="Blackstone Signature Properties and Investments">
+    <div class="footer-links"><a href="#top">Home</a><a href="#properties">Buy</a><a href="#sell">Sell</a><a href="#tools">Invest</a><a href="#management">Property Management</a><a href="#about">About</a><a href="#contact">Contact</a></div>
+    <p>Blackstone Signature Properties & Investments is operated by Eagle Rock Ventures, Inc.</p>
+    <p>Broker/Owner Sal Gharibyar · DRE #01418692 · Corp DRE #02117470</p>
+    <p>© <span id="year"></span> Blackstone Signature Properties & Investments. All rights reserved.</p>
   </footer>
 
-  <button class="ai-fab" id="aiFab" aria-label="Open Blackstone AI"><span>✦</span> Ask AI</button>
+  <button class="ai-fab" id="aiFab" aria-label="Open AI Concierge">✦</button>
 
-  <dialog class="ai-dialog" id="aiDialog">
-    <form method="dialog" class="ai-window">
-      <div class="ai-head"><div><small>BLACKSTONE</small><strong>AI Concierge</strong></div><button aria-label="Close">×</button></div>
-      <div class="ai-chat" id="aiChat">
-        <div class="bubble bot">Welcome. I can help with buying, selling, investing or property management. What are you planning?</div>
-      </div>
-      <div class="ai-input-row">
-        <input id="aiInput" type="text" placeholder="Ask about homes, value, or management…" autocomplete="off" />
-        <button id="aiSend" type="button">Send</button>
-      </div>
-      <p class="ai-note">Demo concierge. Connect Gemini/OpenAI later for live answers.</p>
-    </form>
+  <dialog id="toolDialog">
+    <div class="dialog-card">
+      <button class="dialog-close" id="closeTool">×</button>
+      <div id="toolContent"></div>
+    </div>
   </dialog>
 
   <script src="script.js"></script>

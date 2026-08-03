@@ -1,23 +1,29 @@
-const q=(s,p=document)=>p.querySelector(s), qa=(s,p=document)=>[...p.querySelectorAll(s)];
-q('#year').textContent=new Date().getFullYear();
-
-const menuBtn=q('#menuBtn'), mobileNav=q('#mobileNav');
-menuBtn.addEventListener('click',()=>{const open=menuBtn.getAttribute('aria-expanded')==='true';menuBtn.setAttribute('aria-expanded',String(!open));mobileNav.hidden=open;});
-qa('#mobileNav a').forEach(a=>a.addEventListener('click',()=>{mobileNav.hidden=true;menuBtn.setAttribute('aria-expanded','false')}));
-
-const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.14});
-qa('.reveal').forEach(el=>observer.observe(el));
-
-const counters=qa('.metric-number');
-const countObs=new IntersectionObserver(entries=>entries.forEach(entry=>{if(!entry.isIntersecting||entry.target.dataset.done)return;entry.target.dataset.done='1';const t=Number(entry.target.dataset.target);let v=0;const inc=Math.max(1,Math.round(t/45));const timer=setInterval(()=>{v+=inc;if(v>=t){v=t;clearInterval(timer)}entry.target.textContent=v+'+'},28)}),{threshold:.4});
-counters.forEach(c=>countObs.observe(c));
-
-q('#propertySearch').addEventListener('submit',e=>{e.preventDefault();const location=new FormData(e.currentTarget).get('location')||'your preferred East Bay area';openAi(`Help me find homes in ${location}.`)});
-q('#leadForm').addEventListener('submit',e=>{e.preventDefault();q('#formStatus').textContent='Thank you — your request is ready to connect to your CRM or email service.';e.currentTarget.reset()});
-
-const dialog=q('#aiDialog'), chat=q('#aiChat'), input=q('#aiInput');
-function openAi(prefill=''){dialog.showModal();if(prefill){input.value=prefill;input.focus()}}
-q('#aiFab').addEventListener('click',()=>openAi());q('#openAiTop').addEventListener('click',()=>openAi());q('#openAiMain').addEventListener('click',()=>openAi());
-qa('[data-prompt]').forEach(b=>b.addEventListener('click',()=>openAi(b.dataset.prompt)));
-function sendAi(){const text=input.value.trim();if(!text)return;const u=document.createElement('div');u.className='bubble user';u.textContent=text;chat.appendChild(u);input.value='';chat.scrollTop=chat.scrollHeight;setTimeout(()=>{const b=document.createElement('div');b.className='bubble bot';const l=text.toLowerCase();if(l.includes('property management')||l.includes('rental'))b.textContent='Blackstone can help with tenant placement, rent coordination, maintenance and owner reporting. I can collect the property address and best contact number next.';else if(l.includes('worth')||l.includes('value'))b.textContent='A reliable valuation starts with the property address, condition and recent nearby sales. Share the address and I can prepare the next-step request.';else if(l.includes('waterfront')||l.includes('home')||l.includes('house'))b.textContent='I can narrow the search by city, budget, bedrooms and must-have features, then route the request for live MLS matching.';else b.textContent='Thanks. I can collect the key details and connect you with Sal for a personal recommendation.';chat.appendChild(b);chat.scrollTop=chat.scrollHeight},500)}
-q('#aiSend').addEventListener('click',sendAi);input.addEventListener('keydown',e=>{if(e.key==='Enter')sendAi()});
+const $=(s,p=document)=>p.querySelector(s), $$=(s,p=document)=>[...p.querySelectorAll(s)];
+$('#year').textContent=new Date().getFullYear();
+const nav=$('#mainnav'), toggle=$('#menuToggle');
+toggle.addEventListener('click',()=>{const open=nav.classList.toggle('open');toggle.setAttribute('aria-expanded',String(open))});
+$$('#mainnav a').forEach(a=>a.addEventListener('click',()=>nav.classList.remove('open')));
+const io=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting&&e.target.classList.add('visible')),{threshold:.12});$$('.reveal').forEach(x=>io.observe(x));
+const aiPanel=$('#aiPanel'), aiChat=$('#aiChat'), aiInput=$('#aiInput');
+function openAI(text=''){aiPanel.style.display='block';if(text){aiInput.value=text;sendAI()}}
+$('#openAIHero').addEventListener('click',()=>openAI());$('#aiFab').addEventListener('click',()=>openAI());$('#closeAIPanel').addEventListener('click',()=>aiPanel.style.display='none');
+$$('[data-ai]').forEach(b=>b.addEventListener('click',()=>openAI(b.dataset.ai)));
+function bubble(text,type){const d=document.createElement('div');d.className=`chat-bubble chat-${type}`;d.textContent=text;aiChat.appendChild(d);aiChat.scrollTop=aiChat.scrollHeight}
+function sendAI(){const t=aiInput.value.trim();if(!t)return;bubble(t,'user');aiInput.value='';setTimeout(()=>{const s=t.toLowerCase();let r='Thanks. I can collect the details and connect you with Sal for a personal recommendation.';if(s.includes('worth')||s.includes('value'))r='A useful home-value review starts with the property address, condition and recent nearby sales. Please share the address and best contact information.';else if(s.includes('management')||s.includes('rental'))r='Blackstone can help with tenant placement, leasing, maintenance and owner communication. What is the property address?';else if(s.includes('home')||s.includes('showing'))r='I can narrow the search by city, price, bedrooms and must-have features, then route the request for live MLS matching.';else if(s.includes('invest'))r='For investment analysis, share the purchase price, expected rent, repair budget and financing assumptions.';bubble(r,'bot')},450)}
+$('#aiSend').addEventListener('click',sendAI);aiInput.addEventListener('keydown',e=>e.key==='Enter'&&sendAI());
+const dialog=$('#toolDialog'), content=$('#toolContent');$('#closeTool').addEventListener('click',()=>dialog.close());
+const tools={
+ valuation:{title:'Home Value Request',body:`<p>Enter the property address and contact details. A broker-reviewed estimate can then be prepared.</p><div class="calc-grid"><label class="full">Property address<input id="vAddress" placeholder="Street, city, ZIP"></label><label>Name<input id="vName"></label><label>Phone<input id="vPhone"></label></div><button class="gold-btn" onclick="showToolResult('Valuation request prepared. Connect this form to your CRM or email service for live delivery.')">Request Estimate</button>`},
+ mortgage:{title:'Mortgage Calculator',body:`<div class="calc-grid"><label>Home price<input id="mPrice" type="number" value="850000"></label><label>Down payment<input id="mDown" type="number" value="170000"></label><label>Interest rate %<input id="mRate" type="number" step=".01" value="6.5"></label><label>Loan term years<input id="mYears" type="number" value="30"></label></div><button class="gold-btn" onclick="calcMortgage()">Calculate</button><div id="toolResult" class="result-box">Enter assumptions and calculate.</div>`},
+ investment:{title:'Investment Analyzer',body:`<div class="calc-grid"><label>Purchase price<input id="iPrice" type="number" value="700000"></label><label>Monthly rent<input id="iRent" type="number" value="4200"></label><label>Monthly expenses<input id="iExp" type="number" value="1500"></label><label>Cash invested<input id="iCash" type="number" value="175000"></label></div><button class="gold-btn" onclick="calcInvestment()">Analyze</button><div id="toolResult" class="result-box">Enter assumptions and analyze.</div>`},
+ flip:{title:'Property Flip Analyzer',body:`<div class="calc-grid"><label>Purchase price<input id="fBuy" type="number" value="500000"></label><label>Repairs<input id="fRep" type="number" value="90000"></label><label>Holding & selling costs<input id="fCost" type="number" value="55000"></label><label>Expected resale value<input id="fArv" type="number" value="750000"></label></div><button class="gold-btn" onclick="calcFlip()">Analyze</button><div id="toolResult" class="result-box">Enter assumptions and analyze.</div>`},
+ buyrent:{title:'Buy vs. Rent Analyzer',body:`<p>This demo opens the AI Concierge to collect your expected purchase price, rent, down payment and time horizon.</p><button class="gold-btn" onclick="document.getElementById('toolDialog').close();openAI('Help me compare buying versus renting.')">Ask AI Concierge</button>`},
+ market:{title:'East Bay Market Reports',body:`<p>Connect your preferred market-data or MLS source to publish live inventory, median price, days-on-market and rate trends.</p><button class="gold-btn" onclick="showToolResult('Market report request prepared.')">Request a Market Report</button>`}
+};
+$$('[data-open-tool]').forEach(b=>b.addEventListener('click',()=>{const t=tools[b.dataset.openTool];content.innerHTML=`<h2>${t.title}</h2>${t.body}`;dialog.showModal()}));
+window.showToolResult=t=>{let r=$('#toolResult');if(!r){r=document.createElement('div');r.id='toolResult';r.className='result-box';content.appendChild(r)}r.textContent=t};
+window.calcMortgage=()=>{const P=+$ ('#mPrice').value-+$ ('#mDown').value,r=+$ ('#mRate').value/1200,n=+$ ('#mYears').value*12;const pay=r?P*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1):P/n;showToolResult(`Estimated principal and interest: $${pay.toLocaleString(undefined,{maximumFractionDigits:0})} per month.`)};
+window.calcInvestment=()=>{const annual=(+$ ('#iRent').value-+$ ('#iExp').value)*12,ret=annual/(+$ ('#iCash').value||1)*100;showToolResult(`Estimated annual cash flow: $${annual.toLocaleString()}. Cash-on-cash return: ${ret.toFixed(1)}%.`)};
+window.calcFlip=()=>{const profit=+$ ('#fArv').value-(+$ ('#fBuy').value+ +$ ('#fRep').value+ +$ ('#fCost').value);showToolResult(`Estimated project profit: $${profit.toLocaleString()}. Verify all financing, taxes and transaction costs before purchasing.`)};
+$('#leadForm').addEventListener('submit',e=>{e.preventDefault();$('#formStatus').textContent='Thank you. This demo form is ready to connect to email, Supabase or your CRM.';e.currentTarget.reset()});
+$('#viewAllProperties').addEventListener('click',()=>openAI('Show me all available East Bay properties.'));

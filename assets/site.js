@@ -260,8 +260,8 @@ const liveBtn=document.getElementById('useLiveRate');if(liveBtn) liveBtn.addEven
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({message:text,history:history.slice(-10),page:location.pathname})
       });
-      if(!res.ok) throw new Error('AI service unavailable');
-      const data=await res.json();
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(data.error||'AI service unavailable');
       const reply=(data&&data.reply)||localAnswer(text);
       typing.remove(); addMessage('bot',reply);
       history.push({role:'model',text:reply});

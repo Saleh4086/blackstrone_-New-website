@@ -118,7 +118,7 @@ const liveBtn=document.getElementById('useLiveRate');if(liveBtn) liveBtn.addEven
 
 
 // Official weekly Freddie Mac mortgage-rate watch through the Worker API.
-let BLACKSTONE_LIVE_RATE = 6.55;
+let BLACKSTONE_LIVE_RATE = 6.78;
 
 function formatRateDate(value){
   if(!value) return "LATEST AVAILABLE";
@@ -200,7 +200,7 @@ if(liveBtn){
   });
 }
 // Daily conventional and FHA market-rate watch through the Worker API.
-let BLACKSTONE_LIVE_RATE = 6.76;
+let BLACKSTONE_LIVE_RATE = 6.78;
 let BLACKSTONE_FHA_RATE = 6.32;
 
 function formatMarketDate(value){

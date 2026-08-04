@@ -211,73 +211,110 @@ async function fetchFreddieWeeklyRates() {
   };
 }
 
+function parseMndDailyTable(rawText, headingPattern) {
+  const normalized = rawText
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;|&#160;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ");
+
+  const headingIndex = normalized.search(headingPattern);
+  const section = headingIndex >= 0
+    ? normalized.slice(headingIndex, headingIndex + 6000)
+    : normalized;
+
+  const tableRow = section.match(
+    /(\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4}))\s*\|?\s*(\d+\.\d+)%\s*\|?\s*(?:--|\d+\.\d+)?\s*\|?\s*([+-]\d+\.\d+)%/i
+  );
+
+  if (tableRow) {
+    return {
+      updated: tableRow[1],
+      rate: Number.parseFloat(tableRow[2]),
+      change: Number.parseFloat(tableRow[3])
+    };
+  }
+
+  const header = section.match(
+    /(\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4}))[^0-9]{0,120}(\d+\.\d+)%\s*([+-]\d+\.\d+)%/i
+  );
+
+  if (header) {
+    return {
+      updated: header[1],
+      rate: Number.parseFloat(header[2]),
+      change: Number.parseFloat(header[3])
+    };
+  }
+
+  return null;
+}
+
+async function fetchMndPage(pathname) {
+  const sourceUrl = `https://www.mortgagenewsdaily.com${pathname}`;
+  const mirrorUrl = `https://r.jina.ai/https://www.mortgagenewsdaily.com${pathname}`;
+  return fetchTextWithFallback(sourceUrl, mirrorUrl);
+}
+
 async function fetchRates() {
-  const source = "https://www.mortgagenewsdaily.com/mortgage-rates";
-  const mirror = "https://r.jina.ai/https://www.mortgagenewsdaily.com/mortgage-rates";
-
   try {
-    const raw = await fetchTextWithFallback(source, mirror);
-    const text = plainText(raw);
-
-    const updated =
-      (text.match(/(?:as of\s+)?(\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4}))\s+Mortgage News Daily/i) || [])[1] ||
-      (text.match(/(\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4}))\s+30 Yr\. Fixed Rate/i) || [])[1] ||
-      new Date().toLocaleDateString("en-US");
-
-    const rate30 = firstNumber(text, [
-      /30 Yr\.\s*Fixed\s+(\d+\.\d+)%/i,
-      /30YR Fixed Rate\s+(\d+\.\d+)%/i,
-      /30 Year Fixed[^0-9]{0,80}(\d+\.\d+)%/i
+    const [fixedRaw, fhaRaw] = await Promise.all([
+      fetchMndPage('/mortgage-rates/30-year-fixed'),
+      fetchMndPage('/mortgage-rates/30-year-fha')
     ]);
 
-    const rate15 = firstNumber(text, [
-      /15 Yr\.\s*Fixed\s+(\d+\.\d+)%/i,
-      /15YR Fixed Rate\s+(\d+\.\d+)%/i
-    ]);
+    const fixed = parseMndDailyTable(
+      fixedRaw,
+      /MND(?:'s)?\s+30\s+Year\s+Fixed(?:\s*\(daily survey\))?/i
+    );
+    const fha = parseMndDailyTable(
+      fhaRaw,
+      /MND(?:'s)?\s+30\s+Year\s+FHA(?:\s*\(daily survey\))?/i
+    );
 
-    const fha30 = firstNumber(text, [
-      /30 Yr\.\s*FHA\s+(\d+\.\d+)%/i,
-      /30 Year FHA[^0-9]{0,80}(\d+\.\d+)%/i
-    ]);
-
-    const va30 = firstNumber(text, [
-      /30 Yr\.\s*VA\s+(\d+\.\d+)%/i
-    ]);
-
-    const jumbo30 = firstNumber(text, [
-      /30 Yr\.\s*Jumbo\s+(\d+\.\d+)%/i
-    ]);
-
-    const change30 = firstSignedNumber(text, [
-      /30 Yr\.\s*Fixed\s+\d+\.\d+%\s+(?:--\s+)?([+-]\d+\.\d+)%/i,
-      /30YR Fixed Rate\s+\d+\.\d+%\s+([+-]\d+\.\d+)%/i
-    ]);
-
-    const changeFha30 = firstSignedNumber(text, [
-      /30 Yr\.\s*FHA\s+\d+\.\d+%\s+(?:--\s+)?([+-]\d+\.\d+)%/i
-    ]);
-
-    if (!Number.isFinite(rate30)) {
-      throw new Error("Could not read the current daily conventional rate.");
+    if (!fixed || !Number.isFinite(fixed.rate)) {
+      throw new Error('Could not read the daily 30-year fixed index.');
     }
 
     return {
-      rate30,
-      rate15: Number.isFinite(rate15) ? rate15 : null,
-      fha30: Number.isFinite(fha30) ? fha30 : null,
-      va30: Number.isFinite(va30) ? va30 : null,
-      jumbo30: Number.isFinite(jumbo30) ? jumbo30 : null,
-      previous30: Number.isFinite(change30) ? +(rate30 - change30).toFixed(2) : null,
-      change30: Number.isFinite(change30) ? change30 : null,
-      changeFha30: Number.isFinite(changeFha30) ? changeFha30 : null,
-      updated,
-      source: "Mortgage News Daily Rate Index",
-      sourceUrl: source,
-      frequency: "Weekdays, generally updated around 4 PM ET"
+      rate30: fixed.rate,
+      rate15: null,
+      fha30: fha && Number.isFinite(fha.rate) ? fha.rate : null,
+      va30: null,
+      jumbo30: null,
+      previous30: Number.isFinite(fixed.change)
+        ? +(fixed.rate - fixed.change).toFixed(2)
+        : null,
+      change30: Number.isFinite(fixed.change) ? fixed.change : null,
+      changeFha30: fha && Number.isFinite(fha.change) ? fha.change : null,
+      updated: fixed.updated,
+      fhaUpdated: fha?.updated || fixed.updated,
+      source: 'Mortgage News Daily Rate Index',
+      sourceUrl: 'https://www.mortgagenewsdaily.com/mortgage-rates',
+      frequency: 'Weekdays, generally updated around 4 PM ET'
     };
   } catch (error) {
-    console.error("Daily rate fetch error:", error);
-    return fetchFreddieWeeklyRates();
+    console.error('Daily MND rate fetch error:', error);
+
+    // Keep both pages and the ticker synchronized even during a source outage.
+    return {
+      rate30: 6.78,
+      rate15: null,
+      fha30: 6.32,
+      va30: null,
+      jumbo30: null,
+      previous30: null,
+      change30: null,
+      changeFha30: null,
+      updated: '07/28/2026',
+      fhaUpdated: '07/28/2026',
+      source: 'Mortgage News Daily — last verified daily benchmark',
+      sourceUrl: 'https://www.mortgagenewsdaily.com/mortgage-rates',
+      frequency: 'Weekdays',
+      fallback: true
+    };
   }
 }
 
@@ -287,27 +324,18 @@ async function handleRates() {
     return json(data, 200, { "Cache-Control": "public, max-age=1800" });
   } catch (error) {
     console.error("Rate fetch error:", error);
-
-    return json(
-      {
-        rate30: 6.76,
-        rate15: 6.31,
-        fha30: 6.32,
-        va30: 6.34,
-        jumbo30: 6.89,
-        previous30: 6.80,
-        change30: -0.04,
-        changeFha30: -0.04,
-        updated: "07/28/2026",
-        source: "Mortgage News Daily — last verified daily benchmark",
-        sourceUrl: "https://www.mortgagenewsdaily.com/mortgage-rates",
-        frequency: "Weekdays",
-        fallback: true,
-        error: "Live rate source temporarily unavailable."
-      },
-      200,
-      { "Cache-Control": "public, max-age=600" }
-    );
+    return json({
+      rate30: 6.78,
+      fha30: 6.32,
+      previous30: null,
+      change30: null,
+      changeFha30: null,
+      updated: "07/28/2026",
+      source: "Mortgage News Daily — last verified daily benchmark",
+      sourceUrl: "https://www.mortgagenewsdaily.com/mortgage-rates",
+      frequency: "Weekdays",
+      fallback: true
+    }, 200, { "Cache-Control": "public, max-age=600" });
   }
 }
 

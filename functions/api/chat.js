@@ -61,14 +61,14 @@ export async function onRequestPost(context){
     const payload=await aiRes.json();
     if(!aiRes.ok){
       console.error('Gemini error',aiRes.status,JSON.stringify(payload).slice(0,800));
-      return json({error:'AI service error.'},502);
+      return json({error: payload?.error?.message || `Gemini API error (${aiRes.status}).`},502);
     }
     const reply=payload?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('').trim();
     if(!reply) return json({error:'No response generated.'},502);
     return json({reply});
   }catch(err){
     console.error(err);
-    return json({error:'Unable to process request.'},500);
+    return json({error: err && err.message ? err.message : 'Unable to process request.'},500);
   }
 }
 

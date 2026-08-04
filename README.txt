@@ -1,10 +1,16 @@
-BLACKSTONE AI FINAL FIX
+BLACKSTONE ACTIVE AI FIX
 
-Upload these two files to the same locations in GitHub and replace the existing files:
+These are the two files the live website actually uses.
 
-1. blackstone-ai-widget.js  -> repository root
-2. functions/api/chat.js   -> functions/api/chat.js
+Replace in GitHub:
+1. assets/site.js
+2. functions/api/chat.js
 
-Then commit the changes. Cloudflare should redeploy automatically.
-Keep the Cloudflare production secret named exactly GEMINI_API_KEY.
-After the deployment turns green, refresh the website with Ctrl+F5 and ask: What is 2+2?
+Upload the folders exactly as shown so the paths remain:
+- /assets/site.js
+- /functions/api/chat.js
+
+Do not upload README.txt if you do not want it in the repository.
+Commit directly to main, wait for Cloudflare deployment to finish, then refresh the website with Ctrl+F5.
+
+The chatbot will now show the real API error instead of the generic canned response. If the Gemini key and API are valid, it will display Gemini's answer.

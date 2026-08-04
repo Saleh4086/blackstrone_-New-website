@@ -243,7 +243,7 @@ const liveBtn=document.getElementById('useLiveRate');if(liveBtn) liveBtn.addEven
     if(/invest|cap rate|cash flow|roi|flip/.test(s)) return 'Blackstone can help evaluate purchase price, repairs, expected rent or resale value, financing, operating costs, cash flow, cap rate, and exit strategy. Results depend heavily on verified property data, so use estimates for screening and confirm them during due diligence.';
     if(/showing|tour|appointment|schedule/.test(s)) return 'To request a showing, send the property address or listing link, your preferred date and time, and whether you are already pre-approved. Use the Contact page and Sal will confirm availability.';
     if(/sal|blackstone|company|dre|experience/.test(s)) return 'Sal Gharibyar is the Broker/Owner of Blackstone Signature Properties & Investments, a division of Eagle Rock Ventures Inc. He has more than 20 years of real-estate experience. Broker DRE #01418692; Corporate DRE #02117470.';
-    return 'I can help with buying, selling, rentals, property management, mortgages, investing, and Blackstone services. For property-specific assistance, please use the Contact page to reach Sal.';
+    return 'I can provide detailed general guidance on buying, selling, rentals, property management, mortgages, investing, and Blackstone services. The live AI connection may not be configured yet, so please try asking with a little more detail or use the Contact page for property-specific help.';
   }
 
   async function submitMessage(raw){
@@ -261,16 +261,19 @@ const liveBtn=document.getElementById('useLiveRate');if(liveBtn) liveBtn.addEven
         body:JSON.stringify({message:text,history:history.slice(-10),page:location.pathname})
       });
       const data=await res.json().catch(()=>({}));
-      if(!res.ok) throw new Error(data.error||`AI service unavailable (${res.status})`);
-      const reply=(data&&data.reply)||localAnswer(text);
+      if(!res.ok){
+        throw new Error(data.error || `AI request failed (${res.status})`);
+      }
+      const reply=String(data.reply||'').trim();
+      if(!reply) throw new Error('The AI returned an empty response.');
       typing.remove(); addMessage('bot',reply);
       history.push({role:'model',text:reply});
     }catch(err){
       typing.remove();
       console.error('Blackstone AI:',err);
-      const reply=localAnswer(text);
+      const detail=err && err.message ? err.message : 'Unknown connection error';
+      const reply=`The AI connection failed: ${detail}`;
       addMessage('bot',reply,'fallback');
-      history.push({role:'model',text:reply});
     }finally{
       busy=false; send.disabled=false; input.disabled=false; input.focus();
     }

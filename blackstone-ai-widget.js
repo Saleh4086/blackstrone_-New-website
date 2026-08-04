@@ -10,8 +10,7 @@
     propertyManagementUrl: "property-management.html",
     sellerUrl: "sellers.html",
     investmentUrl: "ai-tools.html",
-    apiEndpoint: "https://YOUR-GEMINI-WORKER.workers.dev/api/chat" // Replace with your deployed Worker URL.
-  };
+   apiEndpoint: "https://YOUR-GEMINI-WORKER.workers.dev/api/chat"
 
   const root = document.createElement("div");
   root.innerHTML = `

@@ -1,6 +1,42 @@
-const btn=document.querySelector('.menu-toggle');
-const nav=document.querySelector('.site-header nav');
-if(btn&&nav){btn.addEventListener('click',()=>nav.classList.toggle('open'));}
+// Reliable mobile navigation for desktop and phones.
+(function setupMobileMenu(){
+  function init(){
+    const btn=document.querySelector('.menu-toggle');
+    const nav=document.querySelector('.site-header nav');
+    if(!btn||!nav||btn.dataset.menuReady==='true') return;
+
+    btn.dataset.menuReady='true';
+    btn.setAttribute('type','button');
+    btn.setAttribute('aria-expanded','false');
+    btn.setAttribute('aria-controls','blackstone-main-navigation');
+    nav.id=nav.id||'blackstone-main-navigation';
+
+    const closeMenu=()=>{
+      nav.classList.remove('open');
+      btn.setAttribute('aria-expanded','false');
+    };
+
+    btn.addEventListener('click',(event)=>{
+      event.preventDefault();
+      event.stopPropagation();
+      const isOpen=nav.classList.toggle('open');
+      btn.setAttribute('aria-expanded',String(isOpen));
+    });
+
+    nav.querySelectorAll('a').forEach(link=>link.addEventListener('click',closeMenu));
+    document.addEventListener('click',(event)=>{
+      if(nav.classList.contains('open')&&!nav.contains(event.target)&&event.target!==btn){
+        closeMenu();
+      }
+    });
+    window.addEventListener('resize',()=>{
+      if(window.innerWidth>1000) closeMenu();
+    });
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
+})();
 
 // Luxury-home front page carousel
 const slides=[...document.querySelectorAll('.hero-slide')];

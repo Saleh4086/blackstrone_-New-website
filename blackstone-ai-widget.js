@@ -10,7 +10,7 @@
     propertyManagementUrl: "property-management.html",
     sellerUrl: "sellers.html",
     investmentUrl: "ai-tools.html",
-   apiEndpoint: "https://YOUR-GEMINI-WORKER.workers.dev/api/chat"
+   apiEndpoint: "/api/chat"
 
   const root = document.createElement("div");
   root.innerHTML = `

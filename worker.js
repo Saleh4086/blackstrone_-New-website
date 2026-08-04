@@ -1,4 +1,5 @@
-// Blackstone patch: restore full styling and API routes
+// Blackstone Worker: website assets, Gemini chat, and mortgage-rate API
+
 const SYSTEM_PROMPT = `
 You are the Blackstone AI Concierge for Blackstone Signature Properties & Investments,
 an East Bay California real-estate brokerage and property-management company.
@@ -41,22 +42,28 @@ function json(data, status = 200, extraHeaders = {}) {
 
 function cleanHistory(history) {
   if (!Array.isArray(history)) return [];
-  return history.slice(-10)
-    .filter(x => x && typeof x.text === "string" && x.text.trim())
-    .map(x => ({
-      role: x.role === "model" || x.role === "assistant" ? "model" : "user",
-      parts: [{ text: x.text.trim().slice(0, 5000) }]
+
+  return history
+    .slice(-10)
+    .filter((item) => item && typeof item.text === "string" && item.text.trim())
+    .map((item) => ({
+      role: item.role === "model" || item.role === "assistant" ? "model" : "user",
+      parts: [{ text: item.text.trim().slice(0, 5000) }]
     }));
 }
 
 async function fetchRates() {
   const source = "https://www.freddiemac.com/pmms";
-  const res = await fetch(source, {
+  const response = await fetch(source, {
     headers: { "User-Agent": "BlackstoneRateWatch/2.0" },
     cf: { cacheTtl: 21600, cacheEverything: true }
   });
-  if (!res.ok) throw new Error(`Freddie Mac returned ${res.status}`);
-  const html = await res.text();
+
+  if (!response.ok) {
+    throw new Error(`Freddie Mac returned ${response.status}`);
+  }
+
+  const html = await response.text();
   const text = html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -69,36 +76,38 @@ async function fetchRates() {
     (text.match(/U\.S\. weekly mortgage rate averages as of\s*(\d{1,2}\/\d{1,2}\/\d{4})/i) || [])[1] ||
     (text.match(/as of\s+([A-Z][a-z]+ \d{1,2}, \d{4})/i) || [])[1];
 
-  const rate30 = parseFloat(
-    ((text.match(/30-year Fixed-Rate Mortgage\s*(\d+\.\d+)%/i) || [])[1]) ||
-    ((text.match(/30-year fixed-rate mortgage averaged\s*(\d+\.\d+)%/i) || [])[1])
+  const rate30 = Number.parseFloat(
+    (text.match(/30-year Fixed-Rate Mortgage\s*(\d+\.\d+)%/i) || [])[1] ||
+    (text.match(/30-year fixed-rate mortgage averaged\s*(\d+\.\d+)%/i) || [])[1]
   );
 
-  const rate15 = parseFloat(
-    ((text.match(/15-year Fixed-Rate Mortgage\s*(\d+\.\d+)%/i) || [])[1]) ||
-    ((text.match(/15-year fixed-rate mortgage averaged\s*(\d+\.\d+)%/i) || [])[1])
+  const rate15 = Number.parseFloat(
+    (text.match(/15-year Fixed-Rate Mortgage\s*(\d+\.\d+)%/i) || [])[1] ||
+    (text.match(/15-year fixed-rate mortgage averaged\s*(\d+\.\d+)%/i) || [])[1]
   );
 
-  const previous30 = parseFloat(
-    ((text.match(/30-year FRM averaged [\d.]+%[^.]{0,180}?last week when it averaged\s*(\d+\.\d+)%/i) || [])[1])
-  );
-  const previous15 = parseFloat(
-    ((text.match(/15-year fixed-rate mortgage[^.]{0,160}?last week when it averaged\s*(\d+\.\d+)%/i) || [])[1])
+  const previous30 = Number.parseFloat(
+    (text.match(/30-year FRM averaged [\d.]+%[^.]{0,180}?last week when it averaged\s*(\d+\.\d+)%/i) || [])[1]
   );
 
-  if (!Number.isFinite(rate30)) throw new Error("Could not read the current 30-year rate.");
+  const previous15 = Number.parseFloat(
+    (text.match(/15-year fixed-rate mortgage[^.]{0,160}?last week when it averaged\s*(\d+\.\d+)%/i) || [])[1]
+  );
 
-  const change30 = Number.isFinite(previous30) ? +(rate30 - previous30).toFixed(2) : null;
-  const change15 = Number.isFinite(rate15) && Number.isFinite(previous15)
-    ? +(rate15 - previous15).toFixed(2) : null;
+  if (!Number.isFinite(rate30)) {
+    throw new Error("Could not read the current 30-year rate.");
+  }
 
   return {
     rate30,
     rate15: Number.isFinite(rate15) ? rate15 : null,
     previous30: Number.isFinite(previous30) ? previous30 : null,
     previous15: Number.isFinite(previous15) ? previous15 : null,
-    change30,
-    change15,
+    change30: Number.isFinite(previous30) ? +(rate30 - previous30).toFixed(2) : null,
+    change15:
+      Number.isFinite(rate15) && Number.isFinite(previous15)
+        ? +(rate15 - previous15).toFixed(2)
+        : null,
     updated: date || new Date().toISOString().slice(0, 10),
     source: "Freddie Mac Primary Mortgage Market Survey",
     sourceUrl: source,
@@ -112,20 +121,25 @@ async function handleRates() {
     return json(data, 200, { "Cache-Control": "public, max-age=3600" });
   } catch (error) {
     console.error("Rate fetch error:", error);
-    return json({
-      rate30: 6.55,
-      rate15: 5.93,
-      previous30: 6.49,
-      previous15: 5.82,
-      change30: 0.06,
-      change15: 0.11,
-      updated: "07/16/2026",
-      source: "Freddie Mac PMMS — last verified benchmark",
-      sourceUrl: "https://www.freddiemac.com/pmms",
-      frequency: "Weekly",
-      fallback: true,
-      error: "Live source temporarily unavailable."
-    }, 200, { "Cache-Control": "public, max-age=900" });
+
+    return json(
+      {
+        rate30: 6.55,
+        rate15: 5.93,
+        previous30: 6.49,
+        previous15: 5.82,
+        change30: 0.06,
+        change15: 0.11,
+        updated: "07/16/2026",
+        source: "Freddie Mac PMMS — last verified benchmark",
+        sourceUrl: "https://www.freddiemac.com/pmms",
+        frequency: "Weekly",
+        fallback: true,
+        error: "Live source temporarily unavailable."
+      },
+      200,
+      { "Cache-Control": "public, max-age=900" }
+    );
   }
 }
 
@@ -134,16 +148,21 @@ async function handleChat(request, env) {
     return new Response(null, { status: 204, headers: JSON_HEADERS });
   }
 
-  const apiKey = env.GEMINI_API_KEY || env.Gemini_API_KEY;
+  const apiKey = env?.GEMINI_API_KEY;
+
   if (!apiKey) {
-    return json({ error: "GEMINI_API_KEY is not configured in Cloudflare." }, 500);
+    return json(
+      {
+        error:
+          "GEMINI_API_KEY is missing from the Worker runtime. Add it under Worker Settings → Variables and Secrets, then deploy."
+      },
+      500
+    );
   }
 
   const url = new URL(request.url);
   let body = {};
 
-  // Accept POST normally, but also accept GET/query fallback in case a domain
-  // redirect changes POST into GET.
   if (request.method !== "GET" && request.method !== "HEAD") {
     try {
       body = await request.json();
@@ -156,22 +175,25 @@ async function handleChat(request, env) {
   const message =
     (typeof body?.message === "string" ? body.message : queryMessage).trim();
 
-  // Opening /api/chat directly is now a health check instead of a 405.
   if (!message) {
     return json({
       ok: true,
       route: "/api/chat",
       methodReceived: request.method,
-      geminiKeyConfigured: true,
-      instructions: "The Blackstone widget sends the visitor message to this route."
+      geminiKeyConfigured: true
     });
   }
 
   let rateContext = "";
   try {
     const rates = await fetchRates();
-    rateContext = `\nCurrent website mortgage-rate data: 30-year ${rates.rate30}%, 15-year ${rates.rate15 ?? "unavailable"}%, updated ${rates.updated}, source Freddie Mac PMMS.`;
-  } catch {}
+    rateContext =
+      `\nCurrent website mortgage-rate data: 30-year ${rates.rate30}%, ` +
+      `15-year ${rates.rate15 ?? "unavailable"}%, updated ${rates.updated}, ` +
+      "source Freddie Mac PMMS.";
+  } catch {
+    // The chatbot can still respond if the rate source is temporarily unavailable.
+  }
 
   const contents = cleanHistory(body.history);
   contents.push({
@@ -183,6 +205,7 @@ async function handleChat(request, env) {
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
 
   let response;
+
   try {
     response = await fetch(endpoint, {
       method: "POST",
@@ -202,6 +225,7 @@ async function handleChat(request, env) {
   }
 
   let data;
+
   try {
     data = await response.json();
   } catch {
@@ -210,28 +234,46 @@ async function handleChat(request, env) {
 
   if (!response.ok) {
     console.error("Gemini API error:", response.status, data);
-    const detail = data?.error?.message || `AI service returned ${response.status}.`;
-    // Do not return Google's 405 directly; expose a clear upstream error.
+    const detail =
+      data?.error?.message || `AI service returned ${response.status}.`;
     return json({ error: `Gemini API: ${detail}` }, 502);
   }
 
   const reply = data?.candidates?.[0]?.content?.parts
-    ?.map(p => p?.text || "").join("").trim();
+    ?.map((part) => part?.text || "")
+    .join("")
+    .trim();
 
-  if (!reply) return json({ error: "The AI returned an empty response." }, 502);
+  if (!reply) {
+    return json({ error: "The AI returned an empty response." }, 502);
+  }
+
   return json({ reply });
 }
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
     if (url.pathname === "/api/chat" || url.pathname === "/api/chat/") {
       return handleChat(request, env);
     }
+
     if (url.pathname === "/api/rates" || url.pathname === "/api/rates/") {
-      if (request.method !== "GET") return json({ error: "Method not allowed." }, 405);
+      if (request.method !== "GET") {
+        return json({ error: "Method not allowed." }, 405);
+      }
+
       return handleRates();
     }
+
+    if (!env?.ASSETS || typeof env.ASSETS.fetch !== "function") {
+      return new Response(
+        "Static asset binding is unavailable in this preview. Deploy the Worker and test the live URL.",
+        { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } }
+      );
+    }
+
     return env.ASSETS.fetch(request);
   }
 };

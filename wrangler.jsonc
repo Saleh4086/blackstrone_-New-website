@@ -3,6 +3,9 @@
   "name": "billowing-forest-66bc",
   "compatibility_date": "2026-08-04",
   "main": "worker.js",
+  "secrets": {
+    "required": ["GEMINI_API_KEY"]
+  },
   "assets": {
     "directory": ".",
     "binding": "ASSETS",

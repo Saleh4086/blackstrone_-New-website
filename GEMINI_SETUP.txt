@@ -1,19 +1,26 @@
-BLACKSTONE GEMINI SETUP
+BLACKSTONE AI CONCIERGE — CLOUDFLARE PAGES SETUP
 
-1. Cloudflare → Workers & Pages → Create Worker.
-2. Name it: blackstone-gemini-concierge
-3. Open Edit Code and replace the sample code with gemini-worker.js.
-4. Deploy.
-5. Settings → Variables and Secrets:
-   - Secret name: GEMINI_API_KEY
-   - Value: your Gemini API key
-   - Text variable: GEMINI_MODEL
-   - Value: gemini-2.5-flash
-6. Copy the Worker URL.
-7. Open assets/blackstone-ai-widget.js.
-8. Replace:
-   https://YOUR-GEMINI-WORKER.workers.dev/api/chat
-   with your real Worker URL plus /api/chat.
-9. Upload the widget files to your old website and redeploy.
+This website includes a Cloudflare Pages Function at:
+/functions/api/chat.js
 
-Never place the Gemini key inside HTML or browser JavaScript.
+1. Push all files and folders to the ROOT of your GitHub repository.
+   Important: the "functions" folder must be at the repository root beside index.html.
+
+2. In Cloudflare:
+   Workers & Pages > your Blackstone Pages project > Settings > Variables and Secrets > Add.
+
+3. Add:
+   Variable name: GEMINI_API_KEY
+   Type: Secret
+   Value: your Gemini API key from Google AI Studio
+
+4. Save, then deploy the latest GitHub commit again.
+
+5. Open the website and test Ask Blackstone AI.
+
+SECURITY
+- Do not put the API key in site.js, HTML, GitHub, or a public .env file.
+- The browser calls /api/chat. Cloudflare privately calls Gemini.
+
+FALLBACK
+If the key is missing or the Gemini request fails, the concierge still answers common Blackstone questions using built-in local knowledge.

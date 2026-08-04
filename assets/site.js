@@ -91,204 +91,117 @@ function calculateMortgage(){
 ['homePrice','downPayment','interestRate','loanTerm','propertyTax','insurance','hoa','pmi'].forEach(id=>{const el=document.getElementById(id);if(el){el.addEventListener('input',calculateMortgage);el.addEventListener('change',calculateMortgage)}});
 calculateMortgage();
 
-// Latest Freddie Mac 30-year fixed national average, published weekly through FRED.
-let BLACKSTONE_LIVE_RATE=6.58;
-function formatFredDate(iso){
-  const d=new Date(iso+'T12:00:00');
-  return d.toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'numeric'});
+
+// Freddie Mac weekly mortgage-rate watch.
+let BLACKSTONE_LIVE_RATE = 6.55;
+function trendText(change){
+  if(!Number.isFinite(change)) return 'Weekly change unavailable';
+  if(change > 0) return `▲ Up ${Math.abs(change).toFixed(2)}% from last week`;
+  if(change < 0) return `▼ Down ${Math.abs(change).toFixed(2)}% from last week`;
+  return '→ No change from last week';
 }
-function setRateUI(rate,dateLabel,status,previousRate){
-  if(Number.isFinite(rate)){
-    BLACKSTONE_LIVE_RATE=rate;
-    document.querySelectorAll('[data-live-rate]').forEach(x=>x.textContent=rate.toFixed(2)+'%');
-    document.querySelectorAll('[data-rate-change]').forEach(el=>{
-      el.classList.remove('ticker-up','ticker-down','ticker-flat');
-      if(Number.isFinite(previousRate)){
-        const diff=rate-previousRate;
-        if(Math.abs(diff)>=0.005){
-          el.textContent=(diff>0?'▲ +':'▼ ')+Math.abs(diff).toFixed(2)+'% VS PRIOR WEEK';
-          el.classList.add(diff>0?'ticker-up':'ticker-down');
-        }else{
-          el.textContent='• NO CHANGE VS PRIOR WEEK';
-          el.classList.add('ticker-flat');
-        }
-      }else{
-        el.textContent='• UPDATED WEEKLY';
-        el.classList.add('ticker-flat');
-      }
+function setRateUI(data){
+  if(Number.isFinite(data.rate30)){
+    BLACKSTONE_LIVE_RATE=data.rate30;
+    document.querySelectorAll('[data-live-rate]').forEach(x=>x.textContent=data.rate30.toFixed(2)+'%');
+  }
+  if(Number.isFinite(data.rate15)){
+    document.querySelectorAll('[data-live-rate-15]').forEach(x=>x.textContent=data.rate15.toFixed(2)+'%');
+  }
+  document.querySelectorAll('[data-rate-date]').forEach(x=>x.textContent='Updated '+data.updated);
+  document.querySelectorAll('[data-rate-status]').forEach(x=>x.textContent=trendText(data.change30));
+  document.querySelectorAll('[data-rate-status-15]').forEach(x=>x.textContent=trendText(data.change15));
+  document.querySelectorAll('[data-rate-source]').forEach(x=>x.textContent=data.source+(data.fallback?' · last verified value':''));
+}
+async function refreshWeeklyRates(){
+  if(!document.querySelector('[data-live-rate]')) return;
+  try{
+    const res=await fetch('/api/rates',{cache:'no-store'});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Rate service unavailable');
+    setRateUI(data);
+  }catch(err){
+    setRateUI({
+      rate30:BLACKSTONE_LIVE_RATE, rate15:5.93, change30:null, change15:null,
+      updated:'Last verified benchmark', source:'Freddie Mac PMMS', fallback:true
     });
   }
-  if(dateLabel) document.querySelectorAll('[data-rate-date]').forEach(x=>x.textContent='LATEST WEEKLY AVERAGE · '+dateLabel);
-  if(status) document.querySelectorAll('[data-rate-status]').forEach(x=>x.textContent=status);
 }
-function parseFredCsv(csv){
-  const lines=csv.trim().split(/\r?\n/).slice(1);
-  const rows=[];
-  for(const line of lines){
-    const parts=line.split(',');
-    if(parts.length<2) continue;
-    const rate=parseFloat(parts[1]);
-    if(Number.isFinite(rate)) rows.push({date:parts[0],rate});
-  }
-  return rows;
-}
-async function refreshWeeklyRate(){
-  if(!document.querySelector('[data-live-rate]')) return;
-  const official='https://fred.stlouisfed.org/graph/fredgraph.csv?id=MORTGAGE30US';
-  try{
-    const res=await fetch(official,{cache:'no-store'});
-    if(!res.ok) throw new Error('official source unavailable');
-    const rows=parseFredCsv(await res.text());
-    if(!rows.length) throw new Error('rate not found');
-    const latest=rows[rows.length-1], previous=rows.length>1?rows[rows.length-2]:null;
-    setRateUI(latest.rate,formatFredDate(latest.date),'Updated from Freddie Mac / FRED',previous&&previous.rate);
-  }catch(err){
-    setRateUI(BLACKSTONE_LIVE_RATE,'LATEST AVAILABLE','Showing last known Freddie Mac weekly average',null);
-  }
-}
-refreshWeeklyRate();
-const liveBtn=document.getElementById('useLiveRate');if(liveBtn) liveBtn.addEventListener('click',()=>{document.getElementById('interestRate').value=BLACKSTONE_LIVE_RATE.toFixed(2);calculateMortgage()});
+refreshWeeklyRates();
+const liveBtn=document.getElementById('useLiveRate');
+if(liveBtn) liveBtn.addEventListener('click',()=>{
+  document.getElementById('interestRate').value=BLACKSTONE_LIVE_RATE.toFixed(2);
+  calculateMortgage();
+});
 
-// Blackstone AI Concierge — Gemini-powered with a local knowledge fallback
+// Blackstone AI Concierge
 (function(){
-  if(document.querySelector('.bs-ai-launcher')) return;
-
-  const quickActions = [
-    ['⌕','Search for Homes','Help me search for homes in the East Bay.'],
-    ['$','What’s My Home Worth?','How can Blackstone help estimate what my home is worth?'],
-    ['◆','I Want to Sell My Home','Tell me about selling my home with Blackstone.'],
-    ['▦','Property Management','Tell me about Blackstone property management services and fees.'],
-    ['▣','Schedule a Showing','I would like to schedule a property showing.'],
-    ['↗','Investment Property Analysis','How can you help analyze an investment property?']
-  ];
-
-  const launcher=document.createElement('button');
-  launcher.className='bs-ai-launcher';
-  launcher.setAttribute('aria-label','Open Blackstone AI Concierge');
-  launcher.innerHTML='<span class="bs-ai-star">✦</span><span>Ask Blackstone AI</span>';
-
-  const panel=document.createElement('section');
-  panel.className='bs-ai-panel';
-  panel.setAttribute('aria-label','Blackstone AI Concierge');
-  panel.innerHTML=`
-    <header class="bs-ai-header">
-      <img src="assets/logo.png" alt="Blackstone logo">
-      <div><strong>BLACKSTONE</strong><span>AI Concierge · Online 24/7</span></div>
-      <button class="bs-ai-close" aria-label="Close">×</button>
-    </header>
-    <div class="bs-ai-divider"></div>
-    <div class="bs-ai-scroll">
-      <div class="bs-ai-messages" aria-live="polite">
-        <div class="bs-ai-bubble bot">Hi! I’m Blackstone AI Concierge. How can I help you today?</div>
+  if(document.getElementById('blackstoneAiLauncher')) return;
+  const wrap=document.createElement('div');
+  wrap.innerHTML=`
+    <button id="blackstoneAiLauncher" class="bs-ai-launcher" aria-label="Open Blackstone AI">Ask Blackstone AI</button>
+    <section id="blackstoneAiPanel" class="bs-ai-panel" aria-label="Blackstone AI Concierge">
+      <header><div><strong>BLACKSTONE AI</strong><span>Real Estate Concierge</span></div><button id="blackstoneAiClose" aria-label="Close">×</button></header>
+      <div id="blackstoneAiMessages" class="bs-ai-messages">
+        <div class="bs-ai-bubble bot">Hi! I’m the Blackstone AI Concierge. Ask about buying, selling, mortgage payments, investing, rentals, or property management.</div>
       </div>
-      <div class="bs-ai-actions"></div>
-    </div>
-    <form class="bs-ai-compose">
-      <button type="button" class="bs-ai-mic" aria-label="Use voice input">🎤</button>
-      <input maxlength="1000" autocomplete="off" placeholder="Type a message…" aria-label="Message">
-      <button class="bs-ai-send" type="submit" aria-label="Send">➤</button>
-    </form>
-    <p class="bs-ai-note">General information only. Contact Sal for advice specific to your situation.</p>`;
+      <div class="bs-ai-actions">
+        <button data-ai-prompt="Help me search for a home.">Search Homes</button>
+        <button data-ai-prompt="Help me estimate my home value.">Home Value</button>
+        <button data-ai-prompt="What are the current mortgage rates?">Mortgage Rates</button>
+        <button data-ai-prompt="Tell me about Blackstone property management.">Property Management</button>
+      </div>
+      <form id="blackstoneAiForm" class="bs-ai-form">
+        <textarea id="blackstoneAiInput" rows="2" placeholder="Ask a real estate question…"></textarea>
+        <button type="submit">Send</button>
+      </form>
+      <small>AI responses are general information. Verify property, lending, legal, and market details with qualified professionals.</small>
+    </section>`;
+  document.body.appendChild(wrap);
 
-  document.body.append(panel,launcher);
-  const messages=panel.querySelector('.bs-ai-messages');
-  const actions=panel.querySelector('.bs-ai-actions');
-  const input=panel.querySelector('input');
-  const send=panel.querySelector('.bs-ai-send');
-  const mic=panel.querySelector('.bs-ai-mic');
-  let history=[];
-  let busy=false;
+  const launcher=document.getElementById('blackstoneAiLauncher');
+  const panel=document.getElementById('blackstoneAiPanel');
+  const close=document.getElementById('blackstoneAiClose');
+  const form=document.getElementById('blackstoneAiForm');
+  const input=document.getElementById('blackstoneAiInput');
+  const messages=document.getElementById('blackstoneAiMessages');
+  const history=[];
 
-  quickActions.forEach(([icon,label,prompt])=>{
-    const b=document.createElement('button');
-    b.type='button';
-    b.innerHTML=`<span>${icon}</span>${label}`;
-    b.addEventListener('click',()=>submitMessage(prompt));
-    actions.appendChild(b);
-  });
-
-  function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
-  function format(text){
-    return esc(text)
-      .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-      .replace(/\n/g,'<br>')
-      .replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+  function open(){panel.classList.add('open');launcher.setAttribute('aria-expanded','true');input.focus();}
+  function shut(){panel.classList.remove('open');launcher.setAttribute('aria-expanded','false');}
+  function add(text,who){
+    const b=document.createElement('div');
+    b.className='bs-ai-bubble '+who;
+    b.textContent=text;
+    messages.appendChild(b);
+    messages.scrollTop=messages.scrollHeight;
+    return b;
   }
-  function addMessage(role,text,extra=''){
-    const el=document.createElement('div');
-    el.className=`bs-ai-bubble ${role} ${extra}`.trim();
-    el.innerHTML=format(text);
-    messages.appendChild(el);
-    panel.querySelector('.bs-ai-scroll').scrollTop=panel.querySelector('.bs-ai-scroll').scrollHeight;
-    return el;
-  }
-  function addTyping(){
-    const el=document.createElement('div');
-    el.className='bs-ai-bubble bot typing';
-    el.innerHTML='<i></i><i></i><i></i>';
-    messages.appendChild(el);
-    panel.querySelector('.bs-ai-scroll').scrollTop=panel.querySelector('.bs-ai-scroll').scrollHeight;
-    return el;
-  }
-
-  function localAnswer(q){
-    const s=q.toLowerCase();
-    if(/fee|cost|charge|pricing|management fee/.test(s)) return 'Blackstone’s published property-management pricing is **6% of monthly rent collected**, **one-half of one month’s rent** for tenant placement, and **$300** for a lease renewal. Vendor, screening, legal, court, and other third-party costs are separate. For unusual or multi-unit properties, Sal can confirm a property-specific proposal.';
-    if(/sell|selling process|list my home|listing/.test(s)) return 'Selling with Blackstone begins with a property review and pricing strategy based on comparable sales, condition, timing, and your goals. Blackstone then coordinates preparation, photography and marketing, showings, offer review, negotiations, inspections, appraisal, escrow, and closing. You receive direct broker-led guidance throughout the transaction. Start with the **Home Value** page or contact Sal for a customized plan.';
-    if(/worth|home value|value my/.test(s)) return 'An online estimate is only a starting point. Blackstone prepares a more useful value opinion by reviewing recent comparable sales, current competition, location, condition, upgrades, lot, and market timing. Use the **Home Value** page to request a personalized review.';
-    if(/buy|search.*home|find.*home|house/.test(s)) return 'Blackstone can help define your budget and priorities, arrange financing pre-approval, search and tour homes, evaluate value and condition, structure an offer, negotiate, manage inspections and appraisal, and guide you through escrow and closing. Live MLS search will be added through the approved IDX connection.';
-    if(/rent|tenant|application|apply/.test(s)) return 'For rentals, select the exact available property on the **Apply** page so the correct RentSpree application opens. Requirements and pet policies can differ by property. Applicants should review the listing details and complete the linked screening application for that address.';
-    if(/manage|landlord|property management/.test(s)) return 'Blackstone provides tenant marketing and screening, lease coordination, rent collection, tenant communication, maintenance coordination, inspections, owner reporting, renewals, and general oversight. Published pricing is 6% monthly management, one-half month tenant placement, and $300 renewals, with third-party costs separate.';
-    if(/mortgage|payment|interest rate|down payment|pmi/.test(s)) return 'The mortgage calculator estimates principal and interest along with taxes, insurance, HOA, and PMI. The rate shown on the website is a national benchmark, not a lender quote. Actual pricing depends on credit, occupancy, loan program, down payment, points, and lender.';
-    if(/invest|cap rate|cash flow|roi|flip/.test(s)) return 'Blackstone can help evaluate purchase price, repairs, expected rent or resale value, financing, operating costs, cash flow, cap rate, and exit strategy. Results depend heavily on verified property data, so use estimates for screening and confirm them during due diligence.';
-    if(/showing|tour|appointment|schedule/.test(s)) return 'To request a showing, send the property address or listing link, your preferred date and time, and whether you are already pre-approved. Use the Contact page and Sal will confirm availability.';
-    if(/sal|blackstone|company|dre|experience/.test(s)) return 'Sal Gharibyar is the Broker/Owner of Blackstone Signature Properties & Investments, a division of Eagle Rock Ventures Inc. He has more than 20 years of real-estate experience. Broker DRE #01418692; Corporate DRE #02117470.';
-    return 'I can provide detailed general guidance on buying, selling, rentals, property management, mortgages, investing, and Blackstone services. The live AI connection may not be configured yet, so please try asking with a little more detail or use the Contact page for property-specific help.';
-  }
-
-  async function submitMessage(raw){
-    const text=(raw||'').trim();
-    if(!text||busy) return;
-    busy=true; send.disabled=true; input.disabled=true;
-    addMessage('user',text);
-    history.push({role:'user',text});
-    input.value='';
-    const typing=addTyping();
+  async function send(text){
+    text=(text||'').trim(); if(!text) return;
+    add(text,'user'); history.push({role:'user',text}); input.value='';
+    const typing=add('Thinking…','bot typing');
     try{
       const res=await fetch('/api/chat',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({message:text,history:history.slice(-10),page:location.pathname})
+        body:JSON.stringify({message:text,history:history.slice(-10)})
       });
-      const data=await res.json().catch(()=>({}));
-      if(!res.ok){
-        throw new Error(data.error || `AI request failed (${res.status})`);
-      }
-      const reply=String(data.reply||'').trim();
-      if(!reply) throw new Error('The AI returned an empty response.');
-      typing.remove(); addMessage('bot',reply);
-      history.push({role:'model',text:reply});
-    }catch(err){
+      const data=await res.json();
+      if(!res.ok) throw new Error(data.error||`Request failed (${res.status})`);
       typing.remove();
-      console.error('Blackstone AI:',err);
-      const detail=err && err.message ? err.message : 'Unknown connection error';
-      const reply=`The AI connection failed: ${detail}`;
-      addMessage('bot',reply,'fallback');
-    }finally{
-      busy=false; send.disabled=false; input.disabled=false; input.focus();
+      add(data.reply,'bot');
+      history.push({role:'model',text:data.reply});
+    }catch(err){
+      typing.textContent='AI connection error: '+err.message;
+      typing.classList.remove('typing');
     }
   }
-
-  panel.querySelector('.bs-ai-close').onclick=()=>panel.classList.remove('open');
-  launcher.onclick=()=>{panel.classList.toggle('open');if(panel.classList.contains('open')) setTimeout(()=>input.focus(),100);};
-  panel.querySelector('form').addEventListener('submit',e=>{e.preventDefault();submitMessage(input.value);});
-
-  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(SpeechRecognition){
-    const recognition=new SpeechRecognition(); recognition.lang='en-US'; recognition.interimResults=false;
-    mic.addEventListener('click',()=>{try{recognition.start();mic.classList.add('listening');}catch(e){}});
-    recognition.onresult=e=>{input.value=e.results[0][0].transcript;mic.classList.remove('listening');submitMessage(input.value);};
-    recognition.onend=()=>mic.classList.remove('listening');
-  }else mic.style.display='none';
+  launcher.addEventListener('click',()=>panel.classList.contains('open')?shut():open());
+  close.addEventListener('click',shut);
+  form.addEventListener('submit',e=>{e.preventDefault();send(input.value);});
+  input.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(input.value);}
+  });
+  document.querySelectorAll('[data-ai-prompt]').forEach(b=>b.addEventListener('click',()=>send(b.dataset.aiPrompt)));
 })();
-

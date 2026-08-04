@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "blackstone--new-website",
+  "name": "billowing-forest-66bc",
   "compatibility_date": "2026-08-04",
   "main": "worker.js",
   "assets": {

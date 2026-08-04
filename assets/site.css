@@ -136,3 +136,86 @@ html,body{background:#0b0c0d!important;color:#eee8dc!important}
 .footer-social a{background:#101214}
 @media(max-width:1000px){.site-header nav{top:82px}.brand img{width:138px!important;height:54px!important}}
 @media(max-width:650px){.site-header{height:72px}.brand{height:72px}.brand img{width:122px!important;height:48px!important}.site-header nav{top:72px}.page-hero{padding-top:120px}}
+
+/* Full-width running weekly mortgage-rate ticker */
+.homepage-rate-ticker{
+  position:relative;
+  z-index:40;
+  height:58px;
+  margin-top:92px;
+  overflow:hidden;
+  background:linear-gradient(90deg,#c69a33,#f0d47b,#c69a33);
+  border-top:1px solid rgba(255,255,255,.32);
+  border-bottom:2px solid #6f5620;
+  color:#090909;
+  box-shadow:0 7px 18px rgba(0,0,0,.24)
+}
+.rate-ticker-link{display:block;width:100%;height:100%;overflow:hidden;color:inherit;text-decoration:none}
+.rate-ticker-track{
+  display:flex;
+  width:max-content;
+  height:100%;
+  align-items:center;
+  animation:blackstoneRateTicker 26s linear infinite;
+  will-change:transform
+}
+.rate-ticker-set{
+  display:flex;
+  flex:0 0 auto;
+  align-items:center;
+  gap:34px;
+  white-space:nowrap;
+  padding-right:34px;
+  font-size:15px;
+  font-weight:900;
+  letter-spacing:.07em;
+  text-transform:uppercase
+}
+.rate-ticker-set strong{font-size:21px;color:#000;margin-left:7px}
+.ticker-label{
+  background:#090909;
+  color:#f1d376;
+  height:58px;
+  display:inline-flex;
+  align-items:center;
+  padding:0 28px;
+  font-size:16px;
+  font-weight:900;
+  letter-spacing:.1em
+}
+.ticker-sep{font-size:12px;opacity:.72}
+.rate-ticker-set b{font-size:13px;margin-left:7px}
+.ticker-up{color:#8b1515}
+.ticker-down{color:#0d5e29}
+.ticker-flat{color:#29230f}
+.homepage-rate-ticker:hover .rate-ticker-track{animation-play-state:paused}
+@keyframes blackstoneRateTicker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media(max-width:650px){
+  .homepage-rate-ticker{margin-top:78px;height:50px}
+  .ticker-label{height:50px;padding:0 20px;font-size:13px}
+  .rate-ticker-set{font-size:12px;gap:24px;padding-right:24px}
+  .rate-ticker-set strong{font-size:17px}
+  .rate-ticker-set b{font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){.rate-ticker-track{animation-duration:45s}}
+
+
+/* Final header, ticker, CRM and repair-request positioning */
+.site-header{height:82px!important}
+body>.homepage-rate-ticker{margin-top:82px!important}
+.homepage-rate-ticker{height:54px!important;position:relative!important;z-index:45!important}
+.ticker-label{height:54px!important}
+.site-header nav{gap:17px!important;font-size:9px!important}
+.footer-crm a,.site-footer a[href*="crm.blackstonesignatureproperties.com"]{color:#e4c66f!important;font-weight:700}
+.repair-request-section{border-top:1px solid rgba(205,166,79,.25);background:linear-gradient(145deg,#151719,#0c0e10)!important}
+.repair-request-section .section-head{align-items:center}
+.repair-request-section .section-head p{max-width:760px;color:#c8c1b4;line-height:1.7}
+.repair-request-grid{display:grid;grid-template-columns:.75fr 1.25fr;gap:30px;align-items:start}
+.repair-request-info{padding:30px;border:1px solid rgba(205,166,79,.28);background:#101214}
+.repair-request-info h3{font-family:'Cormorant Garamond',serif;font-size:34px;margin:0 0 12px;color:#f1dfac}
+.repair-request-info p,.repair-request-info li{color:#c8c1b4;line-height:1.7}
+.repair-quick-form{background:#151719!important;border-color:rgba(205,166,79,.32)!important}
+.repair-quick-form label{color:#e8ddc6}
+.repair-quick-form input,.repair-quick-form textarea,.repair-quick-form select{background:#0b0c0d!important;color:#fff!important;border-color:#4b4333!important}
+@media(max-width:1000px){.site-header nav{top:82px!important}.repair-request-grid{grid-template-columns:1fr}}
+@media(max-width:650px){.site-header{height:72px!important}body>.homepage-rate-ticker{margin-top:72px!important}.homepage-rate-ticker{height:48px!important}.ticker-label{height:48px!important}.site-header nav{top:72px!important}.rate-ticker-set{font-size:11px!important;gap:20px!important}.rate-ticker-set strong{font-size:16px!important}.repair-request-section .section-head{align-items:flex-start;flex-direction:column}}

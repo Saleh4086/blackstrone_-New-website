@@ -115,3 +115,87 @@ async function refreshDailyRate(){
 }
 refreshDailyRate();
 const liveBtn=document.getElementById('useLiveRate');if(liveBtn) liveBtn.addEventListener('click',()=>{document.getElementById('interestRate').value=BLACKSTONE_LIVE_RATE.toFixed(2);calculateMortgage()});
+
+
+// Official weekly Freddie Mac mortgage-rate watch through the Worker API.
+let BLACKSTONE_LIVE_RATE = 6.55;
+
+function formatRateDate(value){
+  if(!value) return "LATEST AVAILABLE";
+  const parsed = new Date(value);
+  if(Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric"
+  });
+}
+
+function setRateUI(rate, dateLabel, previousRate){
+  if(Number.isFinite(rate)){
+    BLACKSTONE_LIVE_RATE = rate;
+    document.querySelectorAll("[data-live-rate]").forEach((el)=>{
+      el.textContent = rate.toFixed(2) + "%";
+    });
+
+    document.querySelectorAll("[data-rate-change]").forEach((el)=>{
+      el.classList.remove("ticker-up","ticker-down","ticker-flat");
+      if(Number.isFinite(previousRate)){
+        const diff = rate - previousRate;
+        if(Math.abs(diff) < 0.005){
+          el.textContent = "• UNCHANGED FROM LAST WEEK";
+          el.classList.add("ticker-flat");
+        }else if(diff > 0){
+          el.textContent = "▲ +" + Math.abs(diff).toFixed(2) + "% FROM LAST WEEK";
+          el.classList.add("ticker-up");
+        }else{
+          el.textContent = "▼ " + Math.abs(diff).toFixed(2) + "% FROM LAST WEEK";
+          el.classList.add("ticker-down");
+        }
+      }else{
+        el.textContent = "• UPDATED WEEKLY";
+        el.classList.add("ticker-flat");
+      }
+    });
+  }
+
+  if(dateLabel){
+    document.querySelectorAll("[data-rate-date]").forEach((el)=>{
+      el.textContent = "UPDATED " + dateLabel + " · FREDDIE MAC";
+    });
+  }
+}
+
+async function refreshWeeklyRate(){
+  if(!document.querySelector("[data-live-rate]")) return;
+
+  try{
+    const response = await fetch("/api/rates", { cache: "no-store" });
+    if(!response.ok) throw new Error("Rate API unavailable");
+
+    const data = await response.json();
+    const rate = Number(data.rate30);
+    const previous = Number(data.previous30);
+
+    if(!Number.isFinite(rate)) throw new Error("Invalid rate response");
+
+    setRateUI(
+      rate,
+      formatRateDate(data.updated),
+      Number.isFinite(previous) ? previous : null
+    );
+  }catch(error){
+    setRateUI(BLACKSTONE_LIVE_RATE, "LATEST AVAILABLE", null);
+  }
+}
+
+refreshWeeklyRate();
+
+const liveBtn = document.getElementById("useLiveRate");
+if(liveBtn){
+  liveBtn.addEventListener("click", ()=>{
+    const input = document.getElementById("interestRate");
+    if(input) input.value = BLACKSTONE_LIVE_RATE.toFixed(2);
+    if(typeof calculateMortgage === "function") calculateMortgage();
+  });
+}

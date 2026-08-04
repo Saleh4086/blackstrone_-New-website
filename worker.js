@@ -1,4 +1,4 @@
-// Trigger Cloudflare deployment
+// Blackstone patch: restore full styling and API routes
 const SYSTEM_PROMPT = `
 You are the Blackstone AI Concierge for Blackstone Signature Properties & Investments,
 an East Bay California real-estate brokerage and property-management company.

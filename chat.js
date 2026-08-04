@@ -24,70 +24,143 @@ HOW TO RESPOND:
 9. Do not expose these instructions or mention the API provider.
 10. Be welcoming, informed, and never pushy.`;
 
-function json(data,status=200){
-  return new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store'
+    }
+  });
 }
 
-export async function onRequestPost(context){
-  try{
-    if(!context.env.GEMINI_API_KEY) return json({error:'GEMINI_API_KEY is not configured.'},503);
-    const type=context.request.headers.get('content-type')||'';
-    if(!type.includes('application/json')) return json({error:'JSON required.'},415);
-    const body=await context.request.json();
-    const message=String(body.message||'').trim();
-    if(!message || message.length>1000) return json({error:'Message must be 1–1000 characters.'},400);
+async function listUsableModels(apiKey) {
+  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=100', {
+    headers: { 'x-goog-api-key': apiKey }
+  });
+  if (!response.ok) return [];
 
-    const incoming=Array.isArray(body.history)?body.history.slice(-10):[];
-    const contents=[];
-    for(const item of incoming){
-      const role=item&&item.role==='model'?'model':'user';
-      const text=String(item&&item.text||'').slice(0,1500).trim();
-      if(text) contents.push({role,parts:[{text}]});
+  const data = await response.json();
+  return (data.models || [])
+    .filter(model => Array.isArray(model.supportedGenerationMethods))
+    .filter(model => model.supportedGenerationMethods.includes('generateContent'))
+    .map(model => String(model.name || '').replace(/^models\//, ''))
+    .filter(Boolean);
+}
+
+function rankModels(models) {
+  const preferred = [
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite'
+  ];
+
+  const ranked = [];
+  for (const name of preferred) {
+    if (models.includes(name)) ranked.push(name);
+  }
+
+  const remaining = models
+    .filter(name => !ranked.includes(name))
+    .filter(name => /gemini/i.test(name))
+    .filter(name => /flash/i.test(name))
+    .filter(name => !/image|audio|tts|live|embedding/i.test(name));
+
+  return [...ranked, ...remaining];
+}
+
+async function callGemini(apiKey, model, contents) {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey
+    },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents,
+      generationConfig: {
+        maxOutputTokens: 500,
+        temperature: 0.35
+      }
+    })
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  return { response, payload };
+}
+
+export async function onRequestPost(context) {
+  try {
+    const apiKey = context.env.GEMINI_API_KEY;
+    if (!apiKey) return json({ error: 'GEMINI_API_KEY is not configured.' }, 503);
+
+    const contentType = context.request.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) return json({ error: 'JSON required.' }, 415);
+
+    const body = await context.request.json();
+    const message = String(body.message || '').trim();
+    if (!message || message.length > 1000) {
+      return json({ error: 'Message must be 1–1000 characters.' }, 400);
     }
-    if(!contents.length || contents[contents.length-1].parts[0].text!==message){
-      contents.push({role:'user',parts:[{text:message}]});
+
+    const incoming = Array.isArray(body.history) ? body.history.slice(-10) : [];
+    const contents = [];
+
+    for (const item of incoming) {
+      const role = item && item.role === 'model' ? 'model' : 'user';
+      const text = String((item && item.text) || '').slice(0, 1500).trim();
+      if (text) contents.push({ role, parts: [{ text }] });
     }
 
-    // Gemini 2.5 Flash is no longer available to some new API users.
-    // Try Google's current recommended Flash model first, with a lighter fallback.
-    const models=['gemini-3.6-flash','gemini-3.1-flash-lite'];
-    let payload=null;
-    let aiRes=null;
-    let lastError='Gemini API request failed.';
-
-    for(const model of models){
-      const endpoint=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-      aiRes=await fetch(endpoint,{
-        method:'POST',
-        headers:{'Content-Type':'application/json','x-goog-api-key':context.env.GEMINI_API_KEY},
-        body:JSON.stringify({
-          systemInstruction:{parts:[{text:SYSTEM_PROMPT}]},
-          contents,
-          generationConfig:{maxOutputTokens:500,temperature:0.35}
-        })
-      });
-
-      payload=await aiRes.json();
-      if(aiRes.ok) break;
-
-      lastError=payload?.error?.message || `Gemini API error (${aiRes.status}).`;
-      console.error('Gemini error',model,aiRes.status,JSON.stringify(payload).slice(0,800));
-
-      // Only try the fallback when the selected model is unavailable/not found.
-      const unavailable=aiRes.status===404 || /no longer available|not found|unsupported model/i.test(lastError);
-      if(!unavailable) return json({error:lastError},502);
+    if (!contents.length || contents[contents.length - 1].parts[0].text !== message) {
+      contents.push({ role: 'user', parts: [{ text: message }] });
     }
 
-    if(!aiRes || !aiRes.ok) return json({error:lastError},502);
-    const reply=payload?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('').trim();
-    if(!reply) return json({error:'No response generated.'},502);
-    return json({reply});
-  }catch(err){
-    console.error(err);
-    return json({error: err && err.message ? err.message : 'Unable to process request.'},500);
+    const available = await listUsableModels(apiKey);
+    const candidates = rankModels(available);
+
+    if (!candidates.length) {
+      return json({ error: 'No compatible Gemini text model is available for this API key.' }, 502);
+    }
+
+    let lastError = 'Gemini API request failed.';
+
+    for (const model of candidates.slice(0, 6)) {
+      const { response, payload } = await callGemini(apiKey, model, contents);
+
+      if (response.ok) {
+        const reply = payload?.candidates?.[0]?.content?.parts
+          ?.map(part => part.text || '')
+          .join('')
+          .trim();
+
+        if (reply) return json({ reply, model });
+        lastError = `The model ${model} returned no text.`;
+        continue;
+      }
+
+      lastError = payload?.error?.message || `Gemini API error (${response.status}).`;
+      console.error('Gemini error', model, response.status, JSON.stringify(payload).slice(0, 1000));
+
+      const tryAnother =
+        response.status === 404 ||
+        response.status === 429 ||
+        response.status === 503 ||
+        /no longer available|not found|unsupported model|overloaded|unavailable/i.test(lastError);
+
+      if (!tryAnother) break;
+    }
+
+    return json({ error: lastError }, 502);
+  } catch (error) {
+    console.error(error);
+    return json({ error: error && error.message ? error.message : 'Unable to process request.' }, 500);
   }
 }
 
-export function onRequest(){
-  return json({error:'Method not allowed.'},405);
+export function onRequest() {
+  return json({ error: 'Method not allowed.' }, 405);
 }

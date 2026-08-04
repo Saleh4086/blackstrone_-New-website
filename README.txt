@@ -1,29 +1,38 @@
-BLACKSTONE LUXURY AI WEBSITE
+BLACKSTONE AI CONCIERGE WIDGET
 
-This is a separate public-facing website project, not the Blackstone CRM.
+This package is designed to be added to your existing Blackstone website.
 
-DEPLOY TO CLOUDFLARE
-1. Unzip this package.
-2. In Cloudflare Workers & Pages, create a new Pages/Static Assets project.
-3. Upload the CONTENTS of this folder so index.html is at the project root.
-4. Deploy and connect your custom domain.
+INSTALLATION
+1. Upload these files into your existing website's assets folder:
+   - assets/blackstone-ai-widget.css
+   - assets/blackstone-ai-widget.js
+   - assets/blackstone-logo.jpg
 
-CURRENT DEMO FEATURES
-- Responsive luxury black-and-gold design
-- Official Blackstone logo
-- AI Concierge demo with scripted responses
-- Featured property cards (sample content)
-- Home value request
-- Working mortgage, investment and flip calculators
-- Buyer, seller and property-management sections
-- Lead/contact form demo
+2. Add this line inside your website's <head>:
+   <link rel="stylesheet" href="assets/blackstone-ai-widget.css">
 
-STILL NEEDS LIVE CONNECTIONS
-- Bridge MLS/IDX for live property search
-- Gemini or OpenAI for real AI answers
-- Supabase/CRM or email service for saving leads
-- Calendar integration for scheduling
-- Twilio for calling and texting
+3. Add this line immediately before </body>:
+   <script src="assets/blackstone-ai-widget.js"></script>
 
-IMPORTANT
-The property cards are samples for design demonstration. Replace them with approved listing data and photos before public advertising.
+4. Upload/redeploy your website.
+
+CURRENT STATUS
+- The widget design and guided demo responses work immediately.
+- The page buttons link to your existing website pages.
+- Live AI is not activated until you add an API endpoint in blackstone-ai-widget.js.
+
+LIVE AI CONNECTION
+In blackstone-ai-widget.js, find:
+apiEndpoint: ""
+
+Replace it with your secure backend endpoint. Never place a private Gemini or OpenAI API key directly in the browser JavaScript.
+
+EDIT YOUR INFORMATION
+At the top of blackstone-ai-widget.js, update:
+- phone
+- email
+- bookingUrl
+- page URLs
+
+MOBILE
+The widget automatically resizes for iPhone and Android screens.

@@ -1,0 +1,19 @@
+BLACKSTONE GEMINI SETUP
+
+1. Cloudflare → Workers & Pages → Create Worker.
+2. Name it: blackstone-gemini-concierge
+3. Open Edit Code and replace the sample code with gemini-worker.js.
+4. Deploy.
+5. Settings → Variables and Secrets:
+   - Secret name: GEMINI_API_KEY
+   - Value: your Gemini API key
+   - Text variable: GEMINI_MODEL
+   - Value: gemini-2.5-flash
+6. Copy the Worker URL.
+7. Open assets/blackstone-ai-widget.js.
+8. Replace:
+   https://YOUR-GEMINI-WORKER.workers.dev/api/chat
+   with your real Worker URL plus /api/chat.
+9. Upload the widget files to your old website and redeploy.
+
+Never place the Gemini key inside HTML or browser JavaScript.

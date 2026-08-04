@@ -130,18 +130,42 @@ async function handleRates() {
 }
 
 async function handleChat(request, env) {
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: JSON_HEADERS });
-  if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: JSON_HEADERS });
+  }
 
   const apiKey = env.GEMINI_API_KEY || env.Gemini_API_KEY;
-  if (!apiKey) return json({ error: "GEMINI_API_KEY is not configured in Cloudflare." }, 500);
+  if (!apiKey) {
+    return json({ error: "GEMINI_API_KEY is not configured in Cloudflare." }, 500);
+  }
 
-  let body;
-  try { body = await request.json(); }
-  catch { return json({ error: "Invalid JSON request." }, 400); }
+  const url = new URL(request.url);
+  let body = {};
 
-  const message = typeof body?.message === "string" ? body.message.trim() : "";
-  if (!message) return json({ error: "A message is required." }, 400);
+  // Accept POST normally, but also accept GET/query fallback in case a domain
+  // redirect changes POST into GET.
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
+  }
+
+  const queryMessage = url.searchParams.get("message") || "";
+  const message =
+    (typeof body?.message === "string" ? body.message : queryMessage).trim();
+
+  // Opening /api/chat directly is now a health check instead of a 405.
+  if (!message) {
+    return json({
+      ok: true,
+      route: "/api/chat",
+      methodReceived: request.method,
+      geminiKeyConfigured: true,
+      instructions: "The Blackstone widget sends the visitor message to this route."
+    });
+  }
 
   let rateContext = "";
   try {
@@ -150,7 +174,10 @@ async function handleChat(request, env) {
   } catch {}
 
   const contents = cleanHistory(body.history);
-  contents.push({ role: "user", parts: [{ text: message.slice(0, 8000) + rateContext }] });
+  contents.push({
+    role: "user",
+    parts: [{ text: message.slice(0, 8000) + rateContext }]
+  });
 
   const endpoint =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
@@ -175,12 +202,17 @@ async function handleChat(request, env) {
   }
 
   let data;
-  try { data = await response.json(); }
-  catch { return json({ error: `Unreadable AI response (${response.status}).` }, 502); }
+  try {
+    data = await response.json();
+  } catch {
+    return json({ error: `Unreadable AI response (${response.status}).` }, 502);
+  }
 
   if (!response.ok) {
     console.error("Gemini API error:", response.status, data);
-    return json({ error: data?.error?.message || `AI service returned ${response.status}.` }, response.status);
+    const detail = data?.error?.message || `AI service returned ${response.status}.`;
+    // Do not return Google's 405 directly; expose a clear upstream error.
+    return json({ error: `Gemini API: ${detail}` }, 502);
   }
 
   const reply = data?.candidates?.[0]?.content?.parts

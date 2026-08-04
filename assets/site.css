@@ -162,3 +162,15 @@ html,body{background:#0b0c0d!important;color:#eee8dc!important}
 .rate-mini strong{display:block;font-size:35px;margin:6px 0}
 .rate-mini small{color:#bbb}
 @media(max-width:600px){.bs-ai-launcher{right:12px;bottom:12px}.bs-ai-panel{right:12px;bottom:70px}.rate-cards-v2{grid-template-columns:1fr}}
+
+
+/* Always-visible mortgage-rate ticker */
+.bs-rate-ticker{position:relative;z-index:12000;width:100%;overflow:hidden;background:#050505;color:#fff;border-bottom:1px solid #b88a2e;min-height:36px;display:flex;align-items:center}
+.bs-rate-track{display:flex;align-items:center;gap:34px;width:max-content;white-space:nowrap;padding:8px 0;animation:bsRateScroll 34s linear infinite;font-size:13px}
+.bs-rate-track span,.bs-rate-track a{display:inline-flex;align-items:center}
+.bs-rate-track strong,.bs-rate-track b,.bs-rate-track a{color:#d7b363}
+.bs-rate-track a{text-decoration:none;font-weight:800}
+.bs-rate-ticker:hover .bs-rate-track{animation-play-state:paused}
+@keyframes bsRateScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media(prefers-reduced-motion:reduce){.bs-rate-track{animation:none;overflow-x:auto;width:100%;padding-left:12px}}
+

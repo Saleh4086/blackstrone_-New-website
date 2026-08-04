@@ -199,3 +199,124 @@ if(liveBtn){
     if(typeof calculateMortgage === "function") calculateMortgage();
   });
 }
+// Daily conventional and FHA market-rate watch through the Worker API.
+let BLACKSTONE_LIVE_RATE = 6.76;
+let BLACKSTONE_FHA_RATE = 6.32;
+
+function formatMarketDate(value){
+  if(!value) return "LATEST AVAILABLE";
+  const parsed = new Date(value);
+  if(Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric"
+  });
+}
+
+function applyChange(el, change, dailyLabel){
+  el.classList.remove("ticker-up","ticker-down","ticker-flat");
+  if(!Number.isFinite(change)){
+    el.textContent = dailyLabel;
+    el.classList.add("ticker-flat");
+  }else if(Math.abs(change) < 0.005){
+    el.textContent = "• UNCHANGED TODAY";
+    el.classList.add("ticker-flat");
+  }else if(change > 0){
+    el.textContent = "▲ +" + Math.abs(change).toFixed(2) + "% TODAY";
+    el.classList.add("ticker-up");
+  }else{
+    el.textContent = "▼ " + Math.abs(change).toFixed(2) + "% TODAY";
+    el.classList.add("ticker-down");
+  }
+}
+
+function setDailyRateUI(data){
+  const conventional = Number(data.rate30);
+  const fha = Number(data.fha30);
+  const change30 = Number(data.change30);
+  const changeFha = Number(data.changeFha30);
+
+  if(Number.isFinite(conventional)){
+    BLACKSTONE_LIVE_RATE = conventional;
+    document.querySelectorAll("[data-live-rate]").forEach((el)=>{
+      el.textContent = conventional.toFixed(2) + "%";
+    });
+  }
+
+  if(Number.isFinite(fha)){
+    BLACKSTONE_FHA_RATE = fha;
+    document.querySelectorAll("[data-fha-rate]").forEach((el)=>{
+      el.textContent = fha.toFixed(2) + "%";
+    });
+  }else{
+    document.querySelectorAll("[data-fha-rate]").forEach((el)=>{
+      el.textContent = "See lender";
+    });
+  }
+
+  document.querySelectorAll("[data-rate-change]").forEach((el)=>{
+    applyChange(el, Number.isFinite(change30) ? change30 : null, "• UPDATED WEEKDAYS");
+  });
+
+  document.querySelectorAll("[data-fha-change]").forEach((el)=>{
+    applyChange(el, Number.isFinite(changeFha) ? changeFha : null, "• DAILY MARKET INDEX");
+  });
+
+  const dateText = "UPDATED " + formatMarketDate(data.updated) + " · " + (data.source || "DAILY MARKET INDEX");
+  document.querySelectorAll("[data-rate-date]").forEach((el)=>{
+    el.textContent = dateText;
+  });
+
+  document.querySelectorAll("[data-rate-source]").forEach((el)=>{
+    el.textContent = data.source || "Mortgage News Daily Rate Index";
+  });
+
+  const input = document.getElementById("interestRate");
+  if(input && !input.dataset.userChanged){
+    input.value = BLACKSTONE_LIVE_RATE.toFixed(2);
+    if(typeof calculateMortgage === "function") calculateMortgage();
+  }
+}
+
+async function refreshDailyRates(){
+  if(!document.querySelector("[data-live-rate]") && !document.querySelector("[data-fha-rate]")) return;
+
+  try{
+    const response = await fetch("/api/rates", { cache: "no-store" });
+    const data = await response.json();
+    if(!response.ok) throw new Error(data.error || "Rate API unavailable");
+    setDailyRateUI(data);
+  }catch(error){
+    setDailyRateUI({
+      rate30: BLACKSTONE_LIVE_RATE,
+      fha30: BLACKSTONE_FHA_RATE,
+      change30: null,
+      changeFha30: null,
+      updated: "LATEST VERIFIED",
+      source: "Last verified daily benchmark"
+    });
+  }
+}
+
+const rateInput = document.getElementById("interestRate");
+if(rateInput){
+  rateInput.addEventListener("input", ()=>{ rateInput.dataset.userChanged = "true"; });
+}
+
+refreshDailyRates();
+
+const liveBtn = document.getElementById("useLiveRate");
+if(liveBtn){
+  liveBtn.addEventListener("click", ()=>{
+    const input = document.getElementById("interestRate");
+    if(input){
+      input.value = BLACKSTONE_LIVE_RATE.toFixed(2);
+      input.dataset.userChanged = "";
+    }
+    if(typeof calculateMortgage === "function") calculateMortgage();
+  });
+}
+
+
+

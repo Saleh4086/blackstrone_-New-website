@@ -6,3 +6,11 @@
 .bsai-actions{display:grid;gap:10px;padding:8px 20px 14px;overflow:auto}.bsai-actions a{display:flex;gap:16px;align-items:center;text-decoration:none;color:#f2c628;border:2px solid #e8b800;border-radius:20px;padding:15px 18px;font-weight:800;background:#0e1016}.bsai-actions a.featured{background:linear-gradient(135deg,#f4c400,#dda400);color:#111}.bsai-actions a:hover{transform:translateY(-1px)}
 .bsai-form{display:grid;grid-template-columns:58px 1fr 58px;gap:8px;padding:14px 18px 8px;border-top:1px solid rgba(239,189,0,.35)}.bsai-mic,.bsai-send{display:grid;place-items:center;border-radius:18px;background:linear-gradient(135deg,#f4c400,#dda400);color:#111;font-size:23px}.bsai-input{min-width:0;border:2px solid #e5b800;border-radius:18px;background:#171a21;color:#fff;padding:0 16px;font-size:16px;outline:none}.bsai-send{border:0;cursor:pointer}.bsai-disclaimer{margin:0;padding:0 18px 14px;text-align:center;color:#aeb2bc;font-size:12px}
 @media(max-width:640px){.bsai-launcher{right:16px;bottom:14px;padding:15px 20px}.bsai-panel{inset:76px 12px 76px 12px;width:auto;max-height:none;border-radius:30px}.bsai-header{grid-template-columns:64px 1fr 42px;padding:20px}.bsai-logo{width:64px;height:64px}.bsai-header strong{font-size:24px}.bsai-messages{min-height:150px;max-height:34vh;padding:18px 24px}.bsai-message{font-size:18px}.bsai-actions{padding:8px 24px 14px}.bsai-actions a{font-size:18px;padding:17px 20px}.bsai-form{grid-template-columns:62px 1fr 62px;padding:14px 20px 8px}.bsai-input{font-size:18px}.bsai-disclaimer{font-size:12px;padding-bottom:16px}}
+
+.bsai-inline-link{
+  color:#f0c85a;
+  font-weight:800;
+  text-decoration:underline;
+  text-underline-offset:2px
+}
+.bsai-inline-link:hover{color:#fff2b8}

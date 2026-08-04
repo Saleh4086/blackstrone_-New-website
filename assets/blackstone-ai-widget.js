@@ -70,10 +70,67 @@
     if (open) setTimeout(() => input.focus(), 50);
   }
 
+  const APPROVED_LINK_HOSTS = new Set([
+    'blackstonesignatureproperty.com',
+    'www.blackstonesignatureproperty.com',
+    'zillow.com',
+    'www.zillow.com',
+    'realtor.com',
+    'www.realtor.com',
+    'redfin.com',
+    'www.redfin.com',
+    'maps.google.com',
+    'www.google.com'
+  ]);
+
+  function linkifyApprovedUrls(container, text) {
+    const urlPattern = /(https:\/\/[^\s<>"']+)/gi;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = urlPattern.exec(text)) !== null) {
+      const before = text.slice(lastIndex, match.index);
+      if (before) container.appendChild(document.createTextNode(before));
+
+      let urlText = match[1];
+      const trailing = urlText.match(/[),.!?;:]+$/)?.[0] || '';
+      if (trailing) urlText = urlText.slice(0, -trailing.length);
+
+      try {
+        const url = new URL(urlText);
+        if (APPROVED_LINK_HOSTS.has(url.hostname.toLowerCase())) {
+          const link = document.createElement('a');
+          link.href = url.href;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.textContent = url.hostname.replace(/^www\./, '');
+          link.className = 'bsai-inline-link';
+          container.appendChild(link);
+        } else {
+          container.appendChild(document.createTextNode(urlText));
+        }
+      } catch {
+        container.appendChild(document.createTextNode(urlText));
+      }
+
+      if (trailing) container.appendChild(document.createTextNode(trailing));
+      lastIndex = match.index + match[1].length;
+    }
+
+    const rest = text.slice(lastIndex);
+    if (rest) container.appendChild(document.createTextNode(rest));
+  }
+
   function addMessage(text, role) {
     const item = document.createElement('div');
     item.className = `bsai-message ${role}`;
-    item.textContent = text;
+
+    if (role === 'assistant') {
+      linkifyApprovedUrls(item, text);
+    } else {
+      item.textContent = text;
+    }
+
     messages.appendChild(item);
     messages.scrollTop = messages.scrollHeight;
     return item;
@@ -108,7 +165,8 @@
       }
 
       const reply = data.reply || 'I’m sorry, I could not create a response.';
-      loading.textContent = reply;
+      loading.textContent = '';
+      linkifyApprovedUrls(loading, reply);
       loading.classList.remove('loading');
 
       history.push({ role: 'user', text: message });

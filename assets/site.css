@@ -163,14 +163,34 @@ html,body{background:#0b0c0d!important;color:#eee8dc!important}
 .rate-mini small{color:#bbb}
 @media(max-width:600px){.bs-ai-launcher{right:12px;bottom:12px}.bs-ai-panel{right:12px;bottom:70px}.rate-cards-v2{grid-template-columns:1fr}}
 
+/* Original-style Blackstone mortgage runner */
+.bs-classic-ratebar{position:relative;z-index:9000;width:100%;height:50px;overflow:hidden;background:#d9a700;border-top:2px solid #d9a700;border-bottom:2px solid #d9a700}
+.bs-classic-rate-track{display:flex;height:100%;align-items:stretch;width:max-content;white-space:nowrap;animation:bsClassicScroll 42s linear infinite}
+.bs-classic-rate-track span,.bs-classic-rate-track a{display:flex;align-items:center;padding:0 34px;font-size:14px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;text-decoration:none}
+.bs-classic-rate-track .gold{background:#e3b400;color:#141414}
+.bs-classic-rate-track .black{background:#151515;color:#e7b900}
+.bs-classic-rate-track b{margin-left:10px;font-size:18px}
+.bs-classic-ratebar:hover .bs-classic-rate-track{animation-play-state:paused}
+@keyframes bsClassicScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media(max-width:650px){.bs-classic-ratebar{height:42px}.bs-classic-rate-track span,.bs-classic-rate-track a{padding:0 22px;font-size:11px}.bs-classic-rate-track b{font-size:14px}}
 
-/* Always-visible mortgage-rate ticker */
-.bs-rate-ticker{position:relative;z-index:12000;width:100%;overflow:hidden;background:#050505;color:#fff;border-bottom:1px solid #b88a2e;min-height:36px;display:flex;align-items:center}
-.bs-rate-track{display:flex;align-items:center;gap:34px;width:max-content;white-space:nowrap;padding:8px 0;animation:bsRateScroll 34s linear infinite;font-size:13px}
-.bs-rate-track span,.bs-rate-track a{display:inline-flex;align-items:center}
-.bs-rate-track strong,.bs-rate-track b,.bs-rate-track a{color:#d7b363}
-.bs-rate-track a{text-decoration:none;font-weight:800}
-.bs-rate-ticker:hover .bs-rate-track{animation-play-state:paused}
-@keyframes bsRateScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-@media(prefers-reduced-motion:reduce){.bs-rate-track{animation:none;overflow-x:auto;width:100%;padding-left:12px}}
-
+/* Blackstone AI */
+.bs-ai-launcher{position:fixed;right:22px;bottom:22px;z-index:10000;border:0;border-radius:999px;background:#d9aa16;color:#111;padding:15px 21px;font-weight:900;box-shadow:0 12px 35px rgba(0,0,0,.28);cursor:pointer}
+.bs-ai-panel{position:fixed;right:22px;bottom:82px;z-index:10001;width:min(410px,calc(100vw - 24px));height:min(630px,calc(100vh - 110px));background:#171717;color:#fff;border:2px solid #c79b22;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.5);display:none;overflow:hidden}
+.bs-ai-panel.open{display:flex;flex-direction:column}
+.bs-ai-panel header{display:flex;align-items:center;justify-content:space-between;padding:17px 18px;background:#111;border-bottom:1px solid #8c6a18}
+.bs-ai-panel header strong{display:block;color:#f0bd23;letter-spacing:.09em;font-size:21px}
+.bs-ai-panel header span{font-size:13px;color:#fff}
+.bs-ai-panel header button{border:0;background:transparent;color:#fff;font-size:30px;cursor:pointer}
+.bs-ai-messages{padding:16px;overflow:auto;flex:1;background:linear-gradient(180deg,#202020,#151515)}
+.bs-ai-bubble{max-width:87%;padding:13px 15px;border-radius:16px;margin:0 0 12px;white-space:pre-wrap;line-height:1.45;font-size:15px}
+.bs-ai-bubble.bot{background:#303030;border:1px solid #555}
+.bs-ai-bubble.user{background:#efb900;color:#111;margin-left:auto;font-weight:700}
+.bs-ai-bubble.typing{opacity:.8}
+.bs-ai-actions{display:flex;gap:7px;flex-wrap:wrap;padding:10px 12px 0;background:#171717}
+.bs-ai-actions button{border:1px solid #b58a20;background:#232323;color:#e9c55e;border-radius:999px;padding:7px 11px;font-size:11px;cursor:pointer}
+.bs-ai-form{display:flex;gap:9px;padding:12px;background:#171717}
+.bs-ai-form textarea{flex:1;resize:none;border-radius:11px;border:1px solid #888;background:#fff;color:#111;padding:11px;font:inherit}
+.bs-ai-form button{border:0;border-radius:11px;background:#efb900;color:#111;font-weight:900;padding:0 18px;cursor:pointer}
+.bs-ai-panel>small{padding:0 12px 12px;color:#aaa;font-size:10px}
+@media(max-width:600px){.bs-ai-launcher{right:12px;bottom:12px}.bs-ai-panel{right:12px;bottom:70px}}

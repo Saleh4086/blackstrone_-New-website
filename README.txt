@@ -1,26 +1,21 @@
-BLACKSTONE AI 405 + RATE TICKER FIX
+BLACKSTONE PAGES FINAL FIX
 
-Replace exactly these three existing GitHub files:
+This patch is specifically for the Cloudflare PAGES project that serves your custom domain.
 
-ROOT:
-- worker.js
+UPLOAD:
+1. In the GitHub ROOT, upload the entire "functions" folder.
+   It must become:
+   functions/api/chat.js
+   functions/api/rates.js
 
-ASSETS:
-- assets/site.js
-- assets/site.css
+2. In GitHub's existing assets folder, replace:
+   assets/site.js
+   assets/site.css
 
-This patch:
-- Removes the 405 response from /api/chat.
-- Accepts the message through POST and a query-string backup.
-- Makes opening /api/chat show a health response.
-- Restores the moving mortgage-rate ticker across the top of every page.
-- Keeps the weekly Freddie Mac rates and calculator integration.
+3. Commit to main and wait for the Cloudflare Pages deployment.
 
-Upload locations:
-1. Upload worker.js on the main/root GitHub page.
-2. Open assets in GitHub and upload site.js and site.css there.
-3. Commit the changes and wait for Cloudflare to deploy.
-4. Open /api/chat directly. It should show JSON with "ok": true, not 405.
-5. Refresh the website and test the AI widget.
+IMPORTANT:
+The Gemini secret must exist in the PAGES project settings, not only in the separate
+workers.dev project. Use the name GEMINI_API_KEY.
 
-Keep the Cloudflare secret named GEMINI_API_KEY.
+This version restores the older bold yellow-and-black moving mortgage runner.

@@ -91,55 +91,57 @@ function calculateMortgage(){
 ['homePrice','downPayment','interestRate','loanTerm','propertyTax','insurance','hoa','pmi'].forEach(id=>{const el=document.getElementById(id);if(el){el.addEventListener('input',calculateMortgage);el.addEventListener('change',calculateMortgage)}});
 calculateMortgage();
 
+// Classic Blackstone mortgage-rate runner.
+(function(){
+  if(document.getElementById('blackstoneClassicRateBar')) return;
 
-// Freddie Mac weekly mortgage-rate watch.
-let BLACKSTONE_LIVE_RATE = 6.55;
-function trendText(change){
-  if(!Number.isFinite(change)) return 'Weekly change unavailable';
-  if(change > 0) return `▲ Up ${Math.abs(change).toFixed(2)}% from last week`;
-  if(change < 0) return `▼ Down ${Math.abs(change).toFixed(2)}% from last week`;
-  return '→ No change from last week';
-}
-function setRateUI(data){
-  if(Number.isFinite(data.rate30)){
-    BLACKSTONE_LIVE_RATE=data.rate30;
-    document.querySelectorAll('[data-live-rate]').forEach(x=>x.textContent=data.rate30.toFixed(2)+'%');
-  }
-  if(Number.isFinite(data.rate15)){
-    document.querySelectorAll('[data-live-rate-15]').forEach(x=>x.textContent=data.rate15.toFixed(2)+'%');
-  }
-  document.querySelectorAll('[data-rate-date]').forEach(x=>x.textContent='Updated '+data.updated);
-  document.querySelectorAll('[data-rate-status]').forEach(x=>x.textContent=trendText(data.change30));
-  document.querySelectorAll('[data-rate-status-15]').forEach(x=>x.textContent=trendText(data.change15));
-  document.querySelectorAll('[data-rate-source]').forEach(x=>x.textContent=data.source+(data.fallback?' · last verified value':''));
-}
-async function refreshWeeklyRates(){
-  if(!document.querySelector('[data-live-rate]')) return;
-  try{
-    const res=await fetch('/api/rates',{cache:'no-store'});
-    const data=await res.json();
-    if(!res.ok) throw new Error(data.error||'Rate service unavailable');
-    setRateUI(data);
-  }catch(err){
-    setRateUI({
-      rate30:BLACKSTONE_LIVE_RATE, rate15:5.93, change30:null, change15:null,
-      updated:'Last verified benchmark', source:'Freddie Mac PMMS', fallback:true
+  const bar=document.createElement('div');
+  bar.id='blackstoneClassicRateBar';
+  bar.className='bs-classic-ratebar';
+  bar.innerHTML=`
+    <div class="bs-classic-rate-track">
+      <span class="gold">30-YEAR FIXED NATIONAL AVERAGE <b data-run-rate>CHECKING…</b></span>
+      <span class="black">UPDATED WEEKLY</span>
+      <span class="gold" data-run-change>LATEST AVAILABLE</span>
+      <a class="black" href="mortgage-calculator.html">SEE HOW THE LATEST RATE AFFECTS YOUR PAYMENT →</a>
+      <span class="gold">BLACKSTONE MORTGAGE RATE WATCH</span>
+      <a class="black" href="mortgage-calculator.html">OPEN THE BLACKSTONE MORTGAGE CALCULATOR →</a>
+      <span class="gold">30-YEAR FIXED NATIONAL AVERAGE <b data-run-rate>CHECKING…</b></span>
+      <span class="black">UPDATED WEEKLY</span>
+      <span class="gold" data-run-change>LATEST AVAILABLE</span>
+      <a class="black" href="mortgage-calculator.html">SEE HOW THE LATEST RATE AFFECTS YOUR PAYMENT →</a>
+      <span class="gold">BLACKSTONE MORTGAGE RATE WATCH</span>
+      <a class="black" href="mortgage-calculator.html">OPEN THE BLACKSTONE MORTGAGE CALCULATOR →</a>
+    </div>`;
+  const header=document.querySelector('.site-header');
+  if(header) header.insertAdjacentElement('afterend',bar);
+  else document.body.prepend(bar);
+
+  fetch('/api/rates',{cache:'no-store'})
+    .then(r=>r.json().then(data=>({ok:r.ok,data})))
+    .then(({ok,data})=>{
+      if(!ok) throw new Error(data.error||'Rate unavailable');
+      document.querySelectorAll('[data-run-rate]').forEach(x=>x.textContent=Number(data.rate30).toFixed(2)+'%');
+      const c=Number(data.change30);
+      const t=Number.isFinite(c)
+        ? c>0?`▲ UP ${Math.abs(c).toFixed(2)}% FROM LAST WEEK`
+        : c<0?`▼ DOWN ${Math.abs(c).toFixed(2)}% FROM LAST WEEK`
+        :'→ UNCHANGED FROM LAST WEEK'
+        : `LATEST WEEKLY AVERAGE · ${data.updated}`;
+      document.querySelectorAll('[data-run-change]').forEach(x=>x.textContent=t);
+    })
+    .catch(()=>{
+      document.querySelectorAll('[data-run-rate]').forEach(x=>x.textContent='6.55%');
+      document.querySelectorAll('[data-run-change]').forEach(x=>x.textContent='LATEST VERIFIED WEEKLY AVERAGE');
     });
-  }
-}
-refreshWeeklyRates();
-const liveBtn=document.getElementById('useLiveRate');
-if(liveBtn) liveBtn.addEventListener('click',()=>{
-  document.getElementById('interestRate').value=BLACKSTONE_LIVE_RATE.toFixed(2);
-  calculateMortgage();
-});
+})();
 
-// Blackstone AI Concierge
+// Blackstone AI Concierge.
 (function(){
   if(document.getElementById('blackstoneAiLauncher')) return;
   const wrap=document.createElement('div');
   wrap.innerHTML=`
-    <button id="blackstoneAiLauncher" class="bs-ai-launcher" aria-label="Open Blackstone AI">Ask Blackstone AI</button>
+    <button id="blackstoneAiLauncher" class="bs-ai-launcher" aria-label="Open Blackstone AI">✦ Ask Blackstone AI</button>
     <section id="blackstoneAiPanel" class="bs-ai-panel" aria-label="Blackstone AI Concierge">
       <header><div><strong>BLACKSTONE AI</strong><span>Real Estate Concierge</span></div><button id="blackstoneAiClose" aria-label="Close">×</button></header>
       <div id="blackstoneAiMessages" class="bs-ai-messages">
@@ -182,14 +184,19 @@ if(liveBtn) liveBtn.addEventListener('click',()=>{
     add(text,'user'); history.push({role:'user',text}); input.value='';
     const typing=add('Thinking…','bot typing');
     try{
-      const apiUrl='/api/chat?message='+encodeURIComponent(text);
-      const res=await fetch(apiUrl,{
+      const res=await fetch('/api/chat',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        redirect:'follow',
         body:JSON.stringify({message:text,history:history.slice(-10)})
       });
-      const data=await res.json();
+      const raw=await res.text();
+      let data={};
+      if(raw){
+        try{data=JSON.parse(raw);}
+        catch{throw new Error(`Server returned ${res.status}: ${raw.slice(0,120)}`);}
+      }else{
+        throw new Error(`Server returned an empty response (${res.status})`);
+      }
       if(!res.ok) throw new Error(data.error||`Request failed (${res.status})`);
       typing.remove();
       add(data.reply,'bot');
@@ -207,54 +214,3 @@ if(liveBtn) liveBtn.addEventListener('click',()=>{
   });
   document.querySelectorAll('[data-ai-prompt]').forEach(b=>b.addEventListener('click',()=>send(b.dataset.aiPrompt)));
 })();
-
-
-// Blackstone top mortgage-rate ticker.
-(function(){
-  if(document.getElementById('blackstoneRateTicker')) return;
-  const ticker=document.createElement('div');
-  ticker.id='blackstoneRateTicker';
-  ticker.className='bs-rate-ticker';
-  ticker.innerHTML=`
-    <div class="bs-rate-track">
-      <span><strong>Mortgage Rate Watch</strong></span>
-      <span>30-Year Fixed: <b data-ticker-rate30>Checking…</b></span>
-      <span>15-Year Fixed: <b data-ticker-rate15>Checking…</b></span>
-      <span data-ticker-change>Weekly national average</span>
-      <span data-ticker-date>Freddie Mac PMMS</span>
-      <a href="mortgage-calculator.html">Payment Calculator →</a>
-      <span aria-hidden="true"><strong>Mortgage Rate Watch</strong></span>
-      <span aria-hidden="true">30-Year Fixed: <b data-ticker-rate30>Checking…</b></span>
-      <span aria-hidden="true">15-Year Fixed: <b data-ticker-rate15>Checking…</b></span>
-      <span aria-hidden="true" data-ticker-change>Weekly national average</span>
-      <span aria-hidden="true" data-ticker-date>Freddie Mac PMMS</span>
-      <a aria-hidden="true" href="mortgage-calculator.html">Payment Calculator →</a>
-    </div>`;
-  document.body.prepend(ticker);
-
-  async function updateTicker(){
-    try{
-      const res=await fetch('/api/rates',{cache:'no-store'});
-      const data=await res.json();
-      if(!res.ok) throw new Error(data.error||'Rate data unavailable');
-      document.querySelectorAll('[data-ticker-rate30]').forEach(x=>x.textContent=Number(data.rate30).toFixed(2)+'%');
-      document.querySelectorAll('[data-ticker-rate15]').forEach(x=>x.textContent=
-        Number.isFinite(Number(data.rate15))?Number(data.rate15).toFixed(2)+'%':'N/A');
-      const change=Number(data.change30);
-      const changeText=Number.isFinite(change)
-        ? (change>0?`▲ Up ${Math.abs(change).toFixed(2)}% from last week`
-          :change<0?`▼ Down ${Math.abs(change).toFixed(2)}% from last week`
-          :'→ Unchanged from last week')
-        :'Weekly national average';
-      document.querySelectorAll('[data-ticker-change]').forEach(x=>x.textContent=changeText);
-      document.querySelectorAll('[data-ticker-date]').forEach(x=>x.textContent='Updated '+data.updated+' · Freddie Mac');
-    }catch{
-      document.querySelectorAll('[data-ticker-rate30]').forEach(x=>x.textContent='6.55%');
-      document.querySelectorAll('[data-ticker-rate15]').forEach(x=>x.textContent='5.93%');
-      document.querySelectorAll('[data-ticker-change]').forEach(x=>x.textContent='Last verified weekly benchmark');
-      document.querySelectorAll('[data-ticker-date]').forEach(x=>x.textContent='Freddie Mac PMMS');
-    }
-  }
-  updateTicker();
-})();
-

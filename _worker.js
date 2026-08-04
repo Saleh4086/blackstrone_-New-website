@@ -80,7 +80,8 @@ async function handleChat(request, env) {
     const payload = await aiRes.json().catch(() => ({}));
     if (!aiRes.ok) {
       console.error('Gemini error', aiRes.status, JSON.stringify(payload).slice(0, 1000));
-      return json({ error: 'AI service error.', status: aiRes.status }, 502);
+      const providerMessage = payload?.error?.message || 'Gemini request failed.';
+      return json({ error: providerMessage, providerStatus: aiRes.status }, 502);
     }
 
     const reply = payload?.candidates?.[0]?.content?.parts
@@ -99,6 +100,10 @@ async function handleChat(request, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    if (url.pathname === '/api/health') {
+      return json({ ok: true, geminiKeyConfigured: Boolean(env.GEMINI_API_KEY) });
+    }
 
     if (url.pathname === '/api/chat') {
       if (request.method === 'OPTIONS') {

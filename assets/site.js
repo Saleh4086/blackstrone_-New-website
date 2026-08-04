@@ -91,29 +91,62 @@ function calculateMortgage(){
 ['homePrice','downPayment','interestRate','loanTerm','propertyTax','insurance','hoa','pmi'].forEach(id=>{const el=document.getElementById(id);if(el){el.addEventListener('input',calculateMortgage);el.addEventListener('change',calculateMortgage)}});
 calculateMortgage();
 
-// Daily 30-year fixed market-rate watch. The Jina text mirror avoids cross-origin blocking on a static site.
-// Fallback is the most recent value checked while this package was built.
-let BLACKSTONE_LIVE_RATE=6.76;
-function setRateUI(rate,dateLabel,status){
-  if(Number.isFinite(rate)){BLACKSTONE_LIVE_RATE=rate;document.querySelectorAll('[data-live-rate]').forEach(x=>x.textContent=rate.toFixed(2)+'%')}
-  if(dateLabel) document.querySelectorAll('[data-rate-date]').forEach(x=>x.textContent='Market rate watch · '+dateLabel);
+// Latest Freddie Mac 30-year fixed national average, published weekly through FRED.
+let BLACKSTONE_LIVE_RATE=6.58;
+function formatFredDate(iso){
+  const d=new Date(iso+'T12:00:00');
+  return d.toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'numeric'});
+}
+function setRateUI(rate,dateLabel,status,previousRate){
+  if(Number.isFinite(rate)){
+    BLACKSTONE_LIVE_RATE=rate;
+    document.querySelectorAll('[data-live-rate]').forEach(x=>x.textContent=rate.toFixed(2)+'%');
+    document.querySelectorAll('[data-rate-change]').forEach(el=>{
+      el.classList.remove('ticker-up','ticker-down','ticker-flat');
+      if(Number.isFinite(previousRate)){
+        const diff=rate-previousRate;
+        if(Math.abs(diff)>=0.005){
+          el.textContent=(diff>0?'▲ +':'▼ ')+Math.abs(diff).toFixed(2)+'% VS PRIOR WEEK';
+          el.classList.add(diff>0?'ticker-up':'ticker-down');
+        }else{
+          el.textContent='• NO CHANGE VS PRIOR WEEK';
+          el.classList.add('ticker-flat');
+        }
+      }else{
+        el.textContent='• UPDATED WEEKLY';
+        el.classList.add('ticker-flat');
+      }
+    });
+  }
+  if(dateLabel) document.querySelectorAll('[data-rate-date]').forEach(x=>x.textContent='LATEST WEEKLY AVERAGE · '+dateLabel);
   if(status) document.querySelectorAll('[data-rate-status]').forEach(x=>x.textContent=status);
 }
-async function refreshDailyRate(){
-  if(!document.querySelector('[data-live-rate]')) return;
-  try{
-    const res=await fetch('https://r.jina.ai/https://www.mortgagenewsdaily.com/',{cache:'no-store'});
-    if(!res.ok) throw new Error('source unavailable');
-    const text=await res.text();
-    const rateMatch=text.match(/Today['’]s Mortgage Rates[\s\S]{0,450}?(\d{1,2}\/\d{1,2}\/\d{4})[\s\S]{0,180}?30 Yr\. Fixed Rate\s*(\d+\.\d+)%/i) || text.match(/30 Yr\. Fixed Rate\s*(\d+\.\d+)%/i);
-    let rate,dateLabel;
-    if(rateMatch&&rateMatch.length>=3){dateLabel=rateMatch[1];rate=parseFloat(rateMatch[2]);}
-    else if(rateMatch){rate=parseFloat(rateMatch[1]);dateLabel=new Date().toLocaleDateString('en-US');}
-    if(!Number.isFinite(rate)) throw new Error('rate not found');
-    setRateUI(rate,dateLabel,'Updated from Mortgage News Daily');
-  }catch(err){setRateUI(BLACKSTONE_LIVE_RATE,'7/28/2026','Showing last known benchmark — open source for latest');}
+function parseFredCsv(csv){
+  const lines=csv.trim().split(/\r?\n/).slice(1);
+  const rows=[];
+  for(const line of lines){
+    const parts=line.split(',');
+    if(parts.length<2) continue;
+    const rate=parseFloat(parts[1]);
+    if(Number.isFinite(rate)) rows.push({date:parts[0],rate});
+  }
+  return rows;
 }
-refreshDailyRate();
+async function refreshWeeklyRate(){
+  if(!document.querySelector('[data-live-rate]')) return;
+  const official='https://fred.stlouisfed.org/graph/fredgraph.csv?id=MORTGAGE30US';
+  try{
+    const res=await fetch(official,{cache:'no-store'});
+    if(!res.ok) throw new Error('official source unavailable');
+    const rows=parseFredCsv(await res.text());
+    if(!rows.length) throw new Error('rate not found');
+    const latest=rows[rows.length-1], previous=rows.length>1?rows[rows.length-2]:null;
+    setRateUI(latest.rate,formatFredDate(latest.date),'Updated from Freddie Mac / FRED',previous&&previous.rate);
+  }catch(err){
+    setRateUI(BLACKSTONE_LIVE_RATE,'LATEST AVAILABLE','Showing last known Freddie Mac weekly average',null);
+  }
+}
+refreshWeeklyRate();
 const liveBtn=document.getElementById('useLiveRate');if(liveBtn) liveBtn.addEventListener('click',()=>{document.getElementById('interestRate').value=BLACKSTONE_LIVE_RATE.toFixed(2);calculateMortgage()});
 
 // Blackstone AI Concierge — Gemini-powered with a local knowledge fallback

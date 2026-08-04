@@ -162,3 +162,13 @@ html,body{background:#0b0c0d!important;color:#eee8dc!important}
 @keyframes blackstoneRateTicker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media(max-width:650px){.homepage-rate-ticker{margin-top:72px;height:50px}.ticker-label{height:50px;padding:0 20px;font-size:14px}.rate-ticker-set{font-size:13px;gap:24px;padding-right:24px}.rate-ticker-set strong{font-size:17px}.rate-ticker-set b{font-size:12px}.hero-carousel{padding-top:125px}}
 @media(prefers-reduced-motion:reduce){.rate-ticker-track{animation-duration:45s}}
+
+
+/* Homepage coming-soon rental */
+.coming-soon-rental-home .home-rental-feature{overflow:hidden;border:1px solid rgba(197,160,86,.38);box-shadow:0 24px 70px rgba(0,0,0,.22)}
+.coming-soon-rental-home .feature-photo{min-height:430px;background-size:cover;background-position:center}
+.coming-soon-rental-home .feature-copy{background:linear-gradient(145deg,#171717,#0d0d0d);color:#f4efe4}
+.coming-soon-rental-home .feature-copy p{color:#d7d0c2}
+.coming-soon-rental-home .feature-location{color:#c9a75c!important;text-transform:uppercase;letter-spacing:.1em;font-size:.82rem}
+.coming-soon-rental-home .text-link{display:inline-flex;align-items:center;margin-top:12px;color:#d8b568;text-decoration:none;font-weight:700}
+@media(max-width:760px){.coming-soon-rental-home .feature-photo{min-height:285px}.coming-soon-rental-home .feature-copy{padding:26px 22px}.coming-soon-rental-home .hero-actions{display:grid;gap:10px}.coming-soon-rental-home .hero-actions a{margin:0}}

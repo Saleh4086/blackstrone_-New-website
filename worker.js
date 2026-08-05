@@ -582,7 +582,7 @@ function buildLeadPayload(input, requestUrl) {
     city: city || null,
     lead_type: leadType,
     source,
-    status: "new",
+    status: "New Lead",
     timeline: timeline || null,
     motivation: motivation || null,
     notes: notes || null,

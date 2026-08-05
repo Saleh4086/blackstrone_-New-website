@@ -48,14 +48,14 @@ function cleanHistory(history) {
   if (!Array.isArray(history)) return [];
 
   return history
-    .slice(-10)
+    .slice(-4)
     .filter((item) => item && typeof item.text === "string" && item.text.trim())
     .map((item) => ({
       role:
         item.role === "model" || item.role === "assistant"
           ? "model"
           : "user",
-      parts: [{ text: item.text.trim().slice(0, 5000) }]
+      parts: [{ text: item.text.trim().slice(0, 1200) }]
     }));
 }
 
@@ -343,6 +343,74 @@ async function handleRates() {
   }
 }
 
+
+function normalizeQuestion(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .slice(0, 700);
+}
+
+function needsLiveSearch(message) {
+  const text = normalizeQuestion(message);
+  return /\b(today|current|currently|latest|right now|this week|this month|rate|rates|price|prices|listed|listing|for sale|sold|market|news|zillow|redfin|realtor|address|property|school|hoa|tax|assessment|county|city|permit|insurance|availability|open house)\b/.test(text);
+}
+
+function directAnswer(message) {
+  const text = normalizeQuestion(message);
+
+  // Do not spend Gemini quota on simple navigation requests.
+  if (/\b(zillow|redfin|realtor(?:\.com)?)\b/.test(text)) {
+    const encoded = encodeURIComponent(message.replace(/\b(show|find|open|on|in|at|zillow|redfin|realtor(?:\.com)?)\b/gi, " ").replace(/\s+/g, " ").trim());
+    const links = [];
+    if (text.includes("zillow")) links.push(`Zillow: https://www.zillow.com/homes/${encoded}_rb/`);
+    if (text.includes("redfin")) links.push(`Redfin: https://www.redfin.com/stingray/do/location-autocomplete?location=${encoded}`);
+    if (text.includes("realtor")) links.push(`Realtor.com: https://www.realtor.com/realestateandhomes-search/${encoded}`);
+    links.push("Blackstone Search Homes: https://blackstonesignatureproperty.com/search.html");
+    return `Here are the public search links:\n${links.join("\n")}`;
+  }
+
+  if (/\b(phone|call|contact sal|sal's number|broker number)\b/.test(text)) {
+    return "You can contact Sal Gharibyar, Broker/Owner, at (925) 917-5595.";
+  }
+
+  if (/\b(property management fee|management fee|lease.?up fee|renewal fee)\b/.test(text)) {
+    return "Blackstone's standard property-management pricing is 6% of monthly rent collected, a lease-up fee of one-half month's rent, and a $300 lease-renewal fee. Third-party costs are separate.";
+  }
+
+  return null;
+}
+
+async function readCachedAnswer(request, message) {
+  try {
+    const cache = caches.default;
+    const keyUrl = new URL(request.url);
+    keyUrl.pathname = "/api/chat-cache";
+    keyUrl.search = `?q=${encodeURIComponent(normalizeQuestion(message))}`;
+    return await cache.match(new Request(keyUrl.toString(), { method: "GET" }));
+  } catch {
+    return null;
+  }
+}
+
+async function writeCachedAnswer(request, message, response, ttlSeconds = 900) {
+  try {
+    const cache = caches.default;
+    const keyUrl = new URL(request.url);
+    keyUrl.pathname = "/api/chat-cache";
+    keyUrl.search = `?q=${encodeURIComponent(normalizeQuestion(message))}`;
+    const cached = new Response(await response.clone().text(), {
+      status: response.status,
+      headers: {
+        ...Object.fromEntries(response.headers),
+        "Cache-Control": `public, max-age=${ttlSeconds}`
+      }
+    });
+    await cache.put(new Request(keyUrl.toString(), { method: "GET" }), cached);
+  } catch {}
+}
+
 async function handleChat(request, env) {
   if (request.method === "OPTIONS") {
     return new Response(null, {
@@ -401,6 +469,16 @@ async function handleChat(request, env) {
     });
   }
 
+  const instantReply = directAnswer(message);
+  if (instantReply) {
+    return json({ reply: instantReply, cached: true });
+  }
+
+  const cachedAnswer = await readCachedAnswer(request, message);
+  if (cachedAnswer) {
+    return cachedAnswer;
+  }
+
   let rateContext = "";
 
   try {
@@ -428,7 +506,7 @@ async function handleChat(request, env) {
     role: "user",
     parts: [
       {
-        text: message.slice(0, 8000) + rateContext
+        text: message.slice(0, 2500) + rateContext
       }
     ]
   });
@@ -451,13 +529,12 @@ async function handleChat(request, env) {
           parts: [{ text: SYSTEM_PROMPT }]
         },
         contents,
-        tools: [
-          {
-            google_search: {}
-          }
-        ],
+        ...(needsLiveSearch(message)
+          ? { tools: [{ google_search: {} }] }
+          : {}),
         generationConfig: {
-          maxOutputTokens: 900
+          maxOutputTokens: 450,
+          temperature: 0.35
         }
       })
     });
@@ -495,6 +572,17 @@ async function handleChat(request, env) {
     const detail =
       data?.error?.message ||
       `AI service returned ${response.status}.`;
+
+    if (response.status === 429) {
+      return json(
+        {
+          error: "The free AI limit is temporarily reached. Please wait about one minute and try once. If the daily allowance is exhausted, it resets at midnight Pacific Time.",
+          retryable: true
+        },
+        429,
+        { "Retry-After": "60" }
+      );
+    }
 
     return json(
       {
@@ -538,7 +626,9 @@ async function handleChat(request, env) {
     );
   }
 
-  return json({ reply, sources: sourceLinks });
+  const successResponse = json({ reply, sources: sourceLinks });
+  await writeCachedAnswer(request, message, successResponse, needsLiveSearch(message) ? 300 : 1800);
+  return successResponse;
 }
 
 

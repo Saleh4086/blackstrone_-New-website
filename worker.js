@@ -512,9 +512,165 @@ async function handleChat(request, env) {
   return json({ reply });
 }
 
+
+
+// Blackstone Phase 1: securely save website inquiries to the existing Supabase CRM.
+function normalizeLeadType(value, pathname = "") {
+  const raw = String(value || "").trim().toLowerCase();
+  const path = String(pathname || "").toLowerCase();
+
+  if (raw.includes("sell") || path.includes("seller") || path.includes("home-value")) return "seller";
+  if (raw.includes("property management") || raw.includes("landlord") || path.includes("property-management") || path.includes("rental-evaluation")) return "property_management";
+  if (raw.includes("repair") || raw.includes("tenant") || path.includes("repair-request")) return "tenant_repair";
+  if (raw.includes("invest") || path.includes("investment")) return "investor";
+  if (raw.includes("rent") || path.includes("apply")) return "rental";
+  if (raw.includes("buy") || path.includes("buyer") || path.includes("search")) return "buyer";
+  return "contact";
+}
+
+function cleanLeadText(value, maxLength = 2000) {
+  if (value === null || value === undefined) return "";
+  return String(value).trim().slice(0, maxLength);
+}
+
+function buildLeadPayload(input, requestUrl) {
+  const url = new URL(requestUrl);
+  const fields = input?.fields && typeof input.fields === "object" ? input.fields : {};
+  const name = cleanLeadText(input?.name || fields.name || fields.full_name, 200);
+  const email = cleanLeadText(input?.email || fields.email, 320).toLowerCase();
+  const phone = cleanLeadText(input?.phone || fields.phone || fields.mobile, 80);
+  const interest = cleanLeadText(input?.lead_type || fields.lead_type || fields.interest || fields.service, 120);
+  const leadType = normalizeLeadType(interest, input?.page || url.pathname);
+  const propertyAddress = cleanLeadText(
+    input?.property_address || fields.property_address || fields.address || fields.property || fields.property_interested_in,
+    400
+  );
+  const city = cleanLeadText(input?.city || fields.city || fields.desired_city, 160);
+  const timeline = cleanLeadText(input?.timeline || fields.timeline || fields.move_timeline, 160);
+  const motivation = cleanLeadText(input?.motivation || fields.motivation || fields.reason, 500);
+
+  const ignored = new Set([
+    "_captcha", "_template", "_subject", "_next", "name", "full_name", "email", "phone", "mobile",
+    "lead_type", "interest", "service", "property_address", "address", "property", "property_interested_in",
+    "city", "desired_city", "timeline", "move_timeline", "motivation", "reason"
+  ]);
+
+  const details = Object.entries(fields)
+    .filter(([key, value]) => !ignored.has(key) && value !== "" && value !== null && value !== undefined)
+    .map(([key, value]) => `${key.replace(/_/g, " ")}: ${Array.isArray(value) ? value.join(", ") : value}`)
+    .join("\n")
+    .slice(0, 5000);
+
+  const message = cleanLeadText(input?.message || fields.message || fields.notes || fields.property_details || fields.repair_details, 5000);
+  const page = cleanLeadText(input?.page || url.pathname, 500);
+  const source = cleanLeadText(input?.source || `Website - ${page || "form"}`, 250);
+  const notes = [message, details].filter(Boolean).join("\n\n").slice(0, 7000);
+
+  const aiSummary = [
+    `${leadType.replace(/_/g, " ")} website inquiry`,
+    propertyAddress ? `Property: ${propertyAddress}` : "",
+    city ? `City: ${city}` : "",
+    timeline ? `Timeline: ${timeline}` : "",
+    notes ? `Details: ${notes.slice(0, 700)}` : ""
+  ].filter(Boolean).join(" | ");
+
+  const payload = {
+    name: name || "Website Lead",
+    phone: phone || null,
+    email: email || null,
+    property_address: propertyAddress || null,
+    city: city || null,
+    lead_type: leadType,
+    source,
+    status: "new",
+    timeline: timeline || null,
+    motivation: motivation || null,
+    notes: notes || null,
+    ai_rating: leadType === "tenant_repair" ? "priority" : "warm",
+    ai_summary: aiSummary,
+    consent_to_contact: input?.consent_to_contact !== false
+  };
+
+  return payload;
+}
+
+async function insertSupabaseLead(payload, env) {
+  const supabaseUrl = String(env?.SUPABASE_URL || "").replace(/\/$/, "");
+  const supabaseKey = env?.SUPABASE_SERVICE_ROLE_KEY || env?.SUPABASE_ANON_KEY || env?.SUPABASE_PUBLISHABLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase CRM settings are missing from the Worker runtime.");
+  }
+
+  if (env?.CRM_OWNER_USER_ID) {
+    payload.user_id = env.CRM_OWNER_USER_ID;
+  }
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/leads`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": supabaseKey,
+      "Authorization": `Bearer ${supabaseKey}`,
+      "Prefer": "return=representation"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const raw = await response.text();
+  let data = null;
+  try { data = raw ? JSON.parse(raw) : null; } catch { data = raw; }
+
+  if (!response.ok) {
+    const detail = data?.message || data?.details || raw || `Supabase returned ${response.status}`;
+    throw new Error(detail);
+  }
+
+  return Array.isArray(data) ? data[0] : data;
+}
+
+async function handleLeadCapture(request, env) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: JSON_HEADERS });
+  }
+
+  if (request.method !== "POST") {
+    return json({ error: "Use POST for this endpoint." }, 405);
+  }
+
+  let input;
+  try {
+    input = await request.json();
+  } catch {
+    return json({ error: "Invalid lead submission." }, 400);
+  }
+
+  const payload = buildLeadPayload(input, request.url);
+
+  if (!payload.email && !payload.phone) {
+    return json({ error: "Please provide an email address or phone number." }, 400);
+  }
+
+  try {
+    const savedLead = await insertSupabaseLead(payload, env);
+    return json({
+      ok: true,
+      message: "Thank you. Your request was received and Sal will follow up shortly.",
+      lead_id: savedLead?.id || null
+    });
+  } catch (error) {
+    console.error("CRM lead capture error:", error);
+    return json({ error: `CRM connection error: ${error.message}` }, 502);
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    if (url.pathname === "/api/leads" || url.pathname === "/api/leads/") {
+      return handleLeadCapture(request, env);
+    }
 
     if (
       url.pathname === "/api/chat" ||

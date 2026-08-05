@@ -228,5 +228,130 @@ if(liveBtn){
   });
 }
 
+// Blackstone Phase 1: send existing website forms to the Supabase CRM.
+(function setupBlackstoneCrmLeadCapture(){
+  if(window.__blackstoneCrmLeadCaptureReady) return;
+  window.__blackstoneCrmLeadCaptureReady = true;
 
+  const forms = Array.from(document.querySelectorAll('form.lead-form'));
+  if(!forms.length) return;
+
+  function ensureEmailFrame(){
+    let frame = document.getElementById('blackstone-email-frame');
+    if(!frame){
+      frame = document.createElement('iframe');
+      frame.id = 'blackstone-email-frame';
+      frame.name = 'blackstone-email-frame';
+      frame.hidden = true;
+      frame.setAttribute('aria-hidden','true');
+      document.body.appendChild(frame);
+    }
+    return frame;
+  }
+
+  function formToObject(form){
+    const data = new FormData(form);
+    const fields = {};
+    for(const [key,value] of data.entries()){
+      if(value instanceof File){
+        if(value.name) fields[key] = value.name;
+        continue;
+      }
+      if(Object.prototype.hasOwnProperty.call(fields,key)){
+        fields[key] = Array.isArray(fields[key]) ? [...fields[key], value] : [fields[key], value];
+      }else{
+        fields[key] = value;
+      }
+    }
+    return fields;
+  }
+
+  function showStatus(form, message, type){
+    let status = form.querySelector('.blackstone-form-status');
+    if(!status){
+      status = document.createElement('div');
+      status.className = 'blackstone-form-status';
+      status.setAttribute('role','status');
+      status.style.marginTop = '14px';
+      status.style.padding = '12px 14px';
+      status.style.borderRadius = '10px';
+      status.style.fontWeight = '700';
+      form.appendChild(status);
+    }
+    status.textContent = message;
+    status.style.background = type === 'error' ? '#ffe4e4' : '#eef8e9';
+    status.style.color = type === 'error' ? '#8b1111' : '#164f20';
+    status.style.border = type === 'error' ? '1px solid #e4a0a0' : '1px solid #a5cea8';
+  }
+
+  forms.forEach((form)=>{
+    if(form.dataset.crmCaptureBound === 'true') return;
+    form.dataset.crmCaptureBound = 'true';
+
+    form.addEventListener('submit', async (event)=>{
+      if(form.dataset.crmNativeSubmitting === 'true') return;
+      event.preventDefault();
+
+      const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+      const originalText = submitButton?.tagName === 'INPUT' ? submitButton.value : submitButton?.textContent;
+      if(submitButton){
+        submitButton.disabled = true;
+        if(submitButton.tagName === 'INPUT') submitButton.value = 'Sending…';
+        else submitButton.textContent = 'Sending…';
+      }
+
+      const fields = formToObject(form);
+      const payload = {
+        fields,
+        name: fields.name || fields.full_name || '',
+        email: fields.email || '',
+        phone: fields.phone || fields.mobile || '',
+        lead_type: fields.lead_type || fields.interest || fields.service || '',
+        property_address: fields.property_address || fields.address || fields.property || '',
+        city: fields.city || fields.desired_city || '',
+        timeline: fields.timeline || fields.move_timeline || '',
+        motivation: fields.motivation || fields.reason || '',
+        message: fields.message || fields.notes || fields.property_details || fields.repair_details || '',
+        page: window.location.pathname,
+        source: `Website - ${document.title}`,
+        consent_to_contact: fields.consent_to_contact !== 'false'
+      };
+
+      try{
+        const response = await fetch('/api/leads', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json().catch(()=>({}));
+        if(!response.ok) throw new Error(result.error || `Request failed (${response.status})`);
+
+        showStatus(form, result.message || 'Thank you. Your request was received.', 'success');
+
+        // Preserve the existing FormSubmit email notification without navigating away.
+        const originalAction = form.getAttribute('action') || '';
+        if(originalAction.includes('formsubmit.co')){
+          ensureEmailFrame();
+          const originalTarget = form.getAttribute('target');
+          form.dataset.crmNativeSubmitting = 'true';
+          form.setAttribute('target','blackstone-email-frame');
+          HTMLFormElement.prototype.submit.call(form);
+          if(originalTarget) form.setAttribute('target', originalTarget);
+          else form.removeAttribute('target');
+          delete form.dataset.crmNativeSubmitting;
+        }
+
+        form.reset();
+      }catch(error){
+        showStatus(form, error.message || 'We could not submit the request. Please call (925) 917-5595.', 'error');
+      }finally{
+        if(submitButton){
+          submitButton.disabled = false;
+          if(submitButton.tagName === 'INPUT') submitButton.value = originalText || 'Submit';
+          else submitButton.textContent = originalText || 'Submit';
+        }
+      }
+    });
+  });
+})();
 

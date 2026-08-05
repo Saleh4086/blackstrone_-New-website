@@ -1,42 +1,24 @@
-// Reliable mobile navigation for desktop and phones.
-(function setupMobileMenu(){
-  function init(){
-    const btn=document.querySelector('.menu-toggle');
-    const nav=document.querySelector('.site-header nav');
-    if(!btn||!nav||btn.dataset.menuReady==='true') return;
+// Mobile navigation — works with mouse, touch, and keyboard.
+const btn = document.querySelector('.menu-toggle');
+const nav = document.querySelector('.site-header nav');
+if (btn && nav) {
+  btn.setAttribute('type', 'button');
+  btn.setAttribute('aria-expanded', 'false');
 
-    btn.dataset.menuReady='true';
-    btn.setAttribute('type','button');
-    btn.setAttribute('aria-expanded','false');
-    btn.setAttribute('aria-controls','blackstone-main-navigation');
-    nav.id=nav.id||'blackstone-main-navigation';
+  const toggleMenu = () => {
+    const isOpen = nav.classList.toggle('open');
+    btn.setAttribute('aria-expanded', String(isOpen));
+  };
 
-    const closeMenu=()=>{
+  btn.addEventListener('click', toggleMenu);
+
+  nav.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', () => {
       nav.classList.remove('open');
-      btn.setAttribute('aria-expanded','false');
-    };
-
-    btn.addEventListener('click',(event)=>{
-      event.preventDefault();
-      event.stopPropagation();
-      const isOpen=nav.classList.toggle('open');
-      btn.setAttribute('aria-expanded',String(isOpen));
+      btn.setAttribute('aria-expanded', 'false');
     });
-
-    nav.querySelectorAll('a').forEach(link=>link.addEventListener('click',closeMenu));
-    document.addEventListener('click',(event)=>{
-      if(nav.classList.contains('open')&&!nav.contains(event.target)&&event.target!==btn){
-        closeMenu();
-      }
-    });
-    window.addEventListener('resize',()=>{
-      if(window.innerWidth>1000) closeMenu();
-    });
-  }
-
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});
-  else init();
-})();
+  });
+}
 
 // Luxury-home front page carousel
 const slides=[...document.querySelectorAll('.hero-slide')];
@@ -127,114 +109,6 @@ function calculateMortgage(){
 ['homePrice','downPayment','interestRate','loanTerm','propertyTax','insurance','hoa','pmi'].forEach(id=>{const el=document.getElementById(id);if(el){el.addEventListener('input',calculateMortgage);el.addEventListener('change',calculateMortgage)}});
 calculateMortgage();
 
-// Daily 30-year fixed market-rate watch. The Jina text mirror avoids cross-origin blocking on a static site.
-// Fallback is the most recent value checked while this package was built.
-let BLACKSTONE_LIVE_RATE=6.76;
-function setRateUI(rate,dateLabel,status){
-  if(Number.isFinite(rate)){BLACKSTONE_LIVE_RATE=rate;document.querySelectorAll('[data-live-rate]').forEach(x=>x.textContent=rate.toFixed(2)+'%')}
-  if(dateLabel) document.querySelectorAll('[data-rate-date]').forEach(x=>x.textContent='Market rate watch · '+dateLabel);
-  if(status) document.querySelectorAll('[data-rate-status]').forEach(x=>x.textContent=status);
-}
-async function refreshDailyRate(){
-  if(!document.querySelector('[data-live-rate]')) return;
-  try{
-    const res=await fetch('https://r.jina.ai/https://www.mortgagenewsdaily.com/',{cache:'no-store'});
-    if(!res.ok) throw new Error('source unavailable');
-    const text=await res.text();
-    const rateMatch=text.match(/Today['’]s Mortgage Rates[\s\S]{0,450}?(\d{1,2}\/\d{1,2}\/\d{4})[\s\S]{0,180}?30 Yr\. Fixed Rate\s*(\d+\.\d+)%/i) || text.match(/30 Yr\. Fixed Rate\s*(\d+\.\d+)%/i);
-    let rate,dateLabel;
-    if(rateMatch&&rateMatch.length>=3){dateLabel=rateMatch[1];rate=parseFloat(rateMatch[2]);}
-    else if(rateMatch){rate=parseFloat(rateMatch[1]);dateLabel=new Date().toLocaleDateString('en-US');}
-    if(!Number.isFinite(rate)) throw new Error('rate not found');
-    setRateUI(rate,dateLabel,'Updated from Mortgage News Daily');
-  }catch(err){setRateUI(BLACKSTONE_LIVE_RATE,'7/28/2026','Showing last known benchmark — open source for latest');}
-}
-refreshDailyRate();
-const liveBtn=document.getElementById('useLiveRate');if(liveBtn) liveBtn.addEventListener('click',()=>{document.getElementById('interestRate').value=BLACKSTONE_LIVE_RATE.toFixed(2);calculateMortgage()});
-
-
-// Official weekly Freddie Mac mortgage-rate watch through the Worker API.
-let BLACKSTONE_LIVE_RATE = 6.78;
-
-function formatRateDate(value){
-  if(!value) return "LATEST AVAILABLE";
-  const parsed = new Date(value);
-  if(Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString("en-US", {
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric"
-  });
-}
-
-function setRateUI(rate, dateLabel, previousRate){
-  if(Number.isFinite(rate)){
-    BLACKSTONE_LIVE_RATE = rate;
-    document.querySelectorAll("[data-live-rate]").forEach((el)=>{
-      el.textContent = rate.toFixed(2) + "%";
-    });
-
-    document.querySelectorAll("[data-rate-change]").forEach((el)=>{
-      el.classList.remove("ticker-up","ticker-down","ticker-flat");
-      if(Number.isFinite(previousRate)){
-        const diff = rate - previousRate;
-        if(Math.abs(diff) < 0.005){
-          el.textContent = "• UNCHANGED FROM LAST WEEK";
-          el.classList.add("ticker-flat");
-        }else if(diff > 0){
-          el.textContent = "▲ +" + Math.abs(diff).toFixed(2) + "% FROM LAST WEEK";
-          el.classList.add("ticker-up");
-        }else{
-          el.textContent = "▼ " + Math.abs(diff).toFixed(2) + "% FROM LAST WEEK";
-          el.classList.add("ticker-down");
-        }
-      }else{
-        el.textContent = "• UPDATED WEEKLY";
-        el.classList.add("ticker-flat");
-      }
-    });
-  }
-
-  if(dateLabel){
-    document.querySelectorAll("[data-rate-date]").forEach((el)=>{
-      el.textContent = "UPDATED " + dateLabel + " · FREDDIE MAC";
-    });
-  }
-}
-
-async function refreshWeeklyRate(){
-  if(!document.querySelector("[data-live-rate]")) return;
-
-  try{
-    const response = await fetch("/api/rates", { cache: "no-store" });
-    if(!response.ok) throw new Error("Rate API unavailable");
-
-    const data = await response.json();
-    const rate = Number(data.rate30);
-    const previous = Number(data.previous30);
-
-    if(!Number.isFinite(rate)) throw new Error("Invalid rate response");
-
-    setRateUI(
-      rate,
-      formatRateDate(data.updated),
-      Number.isFinite(previous) ? previous : null
-    );
-  }catch(error){
-    setRateUI(BLACKSTONE_LIVE_RATE, "LATEST AVAILABLE", null);
-  }
-}
-
-refreshWeeklyRate();
-
-const liveBtn = document.getElementById("useLiveRate");
-if(liveBtn){
-  liveBtn.addEventListener("click", ()=>{
-    const input = document.getElementById("interestRate");
-    if(input) input.value = BLACKSTONE_LIVE_RATE.toFixed(2);
-    if(typeof calculateMortgage === "function") calculateMortgage();
-  });
-}
 // Daily conventional and FHA market-rate watch through the Worker API.
 let BLACKSTONE_LIVE_RATE = 6.78;
 let BLACKSTONE_FHA_RATE = 6.32;

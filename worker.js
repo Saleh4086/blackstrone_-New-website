@@ -511,9 +511,14 @@ async function handleChat(request, env) {
     ]
   });
 
-  // Keep the same model endpoint currently used by the working deployment.
+  // Use Gemini's current Interactions API. This supports the newer
+  // authorization keys created in Google AI Studio.
   const endpoint =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent";
+    "https://generativelanguage.googleapis.com/v1beta/interactions";
+
+  const conversationText = contents
+    .map((item) => `${item.role === "model" ? "Assistant" : "Visitor"}: ${item?.parts?.[0]?.text || ""}`)
+    .join("\n\n");
 
   let response;
 
@@ -525,16 +530,14 @@ async function handleChat(request, env) {
         "x-goog-api-key": apiKey
       },
       body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: SYSTEM_PROMPT }]
-        },
-        contents,
+        model: "gemini-3.6-flash",
+        system_instruction: SYSTEM_PROMPT,
+        input: conversationText,
         ...(needsLiveSearch(message)
-          ? { tools: [{ google_search: {} }] }
+          ? { tools: [{ type: "google_search" }] }
           : {}),
-        generationConfig: {
-          maxOutputTokens: 450,
-          temperature: 0.35
+        generation_config: {
+          max_output_tokens: 450
         }
       })
     });
@@ -592,12 +595,14 @@ async function handleChat(request, env) {
     );
   }
 
-  let reply = data?.candidates?.[0]?.content?.parts
-    ?.map((part) => part?.text || "")
-    .join("")
-    .trim();
+  let reply = String(
+    data?.output_text ||
+    data?.outputs?.map((item) => item?.text || "").join("") ||
+    data?.steps?.flatMap((step) => step?.content || []).map((item) => item?.text || "").join("") ||
+    ""
+  ).trim();
 
-  const groundingChunks = data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  const groundingChunks = [];
   const sourceLinks = [];
   const seenUrls = new Set();
 

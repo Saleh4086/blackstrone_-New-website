@@ -1,169 +1,183 @@
-(function () {
+(() => {
   'use strict';
 
-  const CONFIG = {
-    agentName: 'Blackstone AI Concierge',
-    phone: '(925) 722-5144',
-    email: 'gharibyar61@gmail.com',
-    bookingUrl: 'contact.html',
-    searchUrl: 'search.html',
-    homeValueUrl: 'home-value.html',
-    propertyManagementUrl: 'property-management.html',
-    sellerUrl: 'sellers.html',
-    investmentUrl: 'ai-tools.html',
-    apiEndpoint: '/api/chat'
-  };
+  const API_URL = '/api/chat';
+  const ROOT_ID = 'blackstone-ai-root';
 
-  const history = [];
+  // Remove any older Blackstone widget versions so desktop and mobile use one design.
+  [
+    '#blackstone-ai-widget',
+    '#blackstone-ai-chat',
+    '.blackstone-ai-widget',
+    '.blackstone-ai-chat',
+    '.bs-ai-widget',
+    '.ai-chat-widget'
+  ].forEach((selector) => {
+    document.querySelectorAll(selector).forEach((node) => {
+      if (node.id !== ROOT_ID) node.remove();
+    });
+  });
+
+  if (document.getElementById(ROOT_ID)) return;
+
   const root = document.createElement('div');
-
+  root.id = ROOT_ID;
   root.innerHTML = `
-    <button id="bs-ai-launcher" aria-label="Open Blackstone AI Concierge">
-      <img src="assets/blackstone-logo.jpg" alt="Blackstone logo" onerror="this.src='assets/logo.png'">
-      <span class="bs-badge">✦</span>
+    <button class="bsai-launcher" type="button" aria-label="Open Blackstone AI">
+      <span class="bsai-spark">✦</span> Ask Blackstone AI
     </button>
-
-    <section id="bs-ai-window" aria-label="Blackstone AI Concierge">
-      <header class="bs-ai-header">
-        <img class="bs-ai-logo" src="assets/blackstone-logo.jpg" alt="Blackstone Signature Properties" onerror="this.src='assets/logo.png'">
-        <div class="bs-ai-title">
-          <strong>BLACKSTONE AI CONCIERGE</strong>
-          <span><i class="bs-online-dot"></i> Online 24/7</span>
+    <section class="bsai-panel" aria-label="Blackstone AI Concierge" aria-hidden="true">
+      <header class="bsai-header">
+        <img src="assets/logo.png" alt="Blackstone logo" class="bsai-logo">
+        <div>
+          <strong>BLACKSTONE</strong>
+          <span>AI Concierge · Online 24/7</span>
         </div>
-        <button class="bs-ai-close" aria-label="Close concierge">×</button>
+        <button class="bsai-close" type="button" aria-label="Close">×</button>
       </header>
-
-      <main class="bs-ai-body" id="bs-ai-body">
-        <div class="bs-message bot">
-          Hi, I’m the Blackstone AI Concierge. I can answer general questions about buying, selling, rentals, property management, mortgages, and investment properties.
-        </div>
-
-        <div class="bs-quick-actions">
-          <button data-action="search">⌕ &nbsp; Search for Homes</button>
-          <button data-action="value">$ &nbsp; What’s My Home Worth?</button>
-          <button data-action="sell">◆ &nbsp; I Want to Sell My Home</button>
-          <button data-action="management">▣ &nbsp; Property Management</button>
-          <button data-action="showing">▣ &nbsp; Schedule a Showing</button>
-          <button data-action="investment">↗ &nbsp; Investment Property Analysis</button>
-        </div>
-      </main>
-
-      <footer class="bs-ai-footer">
-        <form class="bs-ai-form" id="bs-ai-form">
-          <button class="bs-ai-mic" type="button" aria-label="Voice input">🎤</button>
-          <input class="bs-ai-input" id="bs-ai-input" type="text" maxlength="1000" placeholder="Type a message..." autocomplete="off">
-          <button class="bs-ai-send" id="bs-ai-send" type="submit" aria-label="Send">➤</button>
-        </form>
-        <div class="bs-ai-note">General information only. Contact Sal for advice specific to your situation.</div>
-      </footer>
+      <div class="bsai-messages" aria-live="polite">
+        <div class="bsai-message assistant">Hi! I’m the Blackstone AI Concierge. Ask about buying, selling, mortgage payments, investing, rentals, or property management.</div>
+      </div>
+      <div class="bsai-actions">
+        <a href="search.html">⌕ <span>Search for Homes</span></a>
+        <a href="home-value.html">$ <span>What’s My Home Worth?</span></a>
+        <a href="sellers.html">◆ <span>I Want to Sell My Home</span></a>
+        <a class="featured" href="property-management.html">▦ <span>Property Management</span></a>
+        <a href="contact.html">▣ <span>Schedule a Showing</span></a>
+        <a href="properties.html">↗ <span>Investment Property Analysis</span></a>
+      </div>
+      <form class="bsai-form">
+        <label class="bsai-mic" aria-hidden="true">🎤</label>
+        <input class="bsai-input" type="text" autocomplete="off" placeholder="Type a message…" aria-label="Message">
+        <button class="bsai-send" type="submit" aria-label="Send">➤</button>
+      </form>
+      <p class="bsai-disclaimer">General information only. Contact Sal for advice specific to your situation.</p>
     </section>`;
 
   document.body.appendChild(root);
 
-  const launcher = root.querySelector('#bs-ai-launcher');
-  const win = root.querySelector('#bs-ai-window');
-  const close = root.querySelector('.bs-ai-close');
-  const form = root.querySelector('#bs-ai-form');
-  const input = root.querySelector('#bs-ai-input');
-  const send = root.querySelector('#bs-ai-send');
-  const body = root.querySelector('#bs-ai-body');
+  const launcher = root.querySelector('.bsai-launcher');
+  const panel = root.querySelector('.bsai-panel');
+  const close = root.querySelector('.bsai-close');
+  const form = root.querySelector('.bsai-form');
+  const input = root.querySelector('.bsai-input');
+  const messages = root.querySelector('.bsai-messages');
+  const history = [];
 
-  function openWidget() {
-    win.classList.add('open');
-    launcher.classList.add('open');
-    setTimeout(() => input.focus(), 50);
+  function setOpen(open) {
+    panel.classList.toggle('open', open);
+    panel.setAttribute('aria-hidden', String(!open));
+    if (open) setTimeout(() => input.focus(), 50);
   }
 
-  function closeWidget() {
-    win.classList.remove('open');
-    launcher.classList.remove('open');
-  }
+  const APPROVED_LINK_HOSTS = new Set([
+    'blackstonesignatureproperty.com',
+    'www.blackstonesignatureproperty.com',
+    'zillow.com',
+    'www.zillow.com',
+    'realtor.com',
+    'www.realtor.com',
+    'redfin.com',
+    'www.redfin.com',
+    'maps.google.com',
+    'www.google.com'
+  ]);
 
-  function addMessage(text, who) {
-    const el = document.createElement('div');
-    el.className = `bs-message ${who}`;
-    el.textContent = text;
-    body.appendChild(el);
-    body.scrollTop = body.scrollHeight;
-    return el;
-  }
+  function linkifyApprovedUrls(container, text) {
+    const urlPattern = /(https:\/\/[^\s<>"']+)/gi;
+    let lastIndex = 0;
+    let match;
 
-  function setBusy(busy) {
-    input.disabled = busy;
-    send.disabled = busy;
-    send.textContent = busy ? '…' : '➤';
-  }
+    while ((match = urlPattern.exec(text)) !== null) {
+      const before = text.slice(lastIndex, match.index);
+      if (before) container.appendChild(document.createTextNode(before));
 
-  async function askAI(message) {
-    addMessage(message, 'user');
-    history.push({ role: 'user', text: message });
-    setBusy(true);
-    const thinking = addMessage('Thinking…', 'bot');
+      let urlText = match[1];
+      const trailing = urlText.match(/[),.!?;:]+$/)?.[0] || '';
+      if (trailing) urlText = urlText.slice(0, -trailing.length);
 
-    try {
-      const response = await fetch(CONFIG.apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          message,
-          history: history.slice(-10)
-        })
-      });
-
-      let data = {};
       try {
-        data = await response.json();
-      } catch (_) {
-        throw new Error(`The server returned an unreadable response (${response.status}).`);
+        const url = new URL(urlText);
+        if (APPROVED_LINK_HOSTS.has(url.hostname.toLowerCase())) {
+          const link = document.createElement('a');
+          link.href = url.href;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.textContent = url.hostname.replace(/^www\./, '');
+          link.className = 'bsai-inline-link';
+          container.appendChild(link);
+        } else {
+          container.appendChild(document.createTextNode(urlText));
+        }
+      } catch {
+        container.appendChild(document.createTextNode(urlText));
       }
 
-      if (!response.ok) {
-        throw new Error(data.error || `Request failed (${response.status}).`);
-      }
-
-      const reply = typeof data.reply === 'string' ? data.reply.trim() : '';
-      if (!reply) throw new Error('The AI returned an empty response.');
-
-      thinking.textContent = reply;
-      history.push({ role: 'model', text: reply });
-    } catch (error) {
-      console.error('Blackstone AI error:', error);
-      thinking.textContent = `I’m having trouble reaching the AI service right now. ${error.message}`;
-    } finally {
-      setBusy(false);
-      input.focus();
-      body.scrollTop = body.scrollHeight;
+      if (trailing) container.appendChild(document.createTextNode(trailing));
+      lastIndex = match.index + match[1].length;
     }
+
+    const rest = text.slice(lastIndex);
+    if (rest) container.appendChild(document.createTextNode(rest));
   }
 
-  launcher.addEventListener('click', openWidget);
-  close.addEventListener('click', closeWidget);
+  function addMessage(text, role) {
+    const item = document.createElement('div');
+    item.className = `bsai-message ${role}`;
 
-  form.addEventListener('submit', function (event) {
+    if (role === 'assistant') {
+      linkifyApprovedUrls(item, text);
+    } else {
+      item.textContent = text;
+    }
+
+    messages.appendChild(item);
+    messages.scrollTop = messages.scrollHeight;
+    return item;
+  }
+
+  launcher.addEventListener('click', () => setOpen(true));
+  close.addEventListener('click', () => setOpen(false));
+
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const message = input.value.trim();
     if (!message) return;
+
+    addMessage(message, 'user');
     input.value = '';
-    askAI(message);
-  });
+    input.disabled = true;
 
-  root.querySelectorAll('[data-action]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const action = button.dataset.action;
-      const urls = {
-        search: CONFIG.searchUrl,
-        value: CONFIG.homeValueUrl,
-        sell: CONFIG.sellerUrl,
-        management: CONFIG.propertyManagementUrl,
-        showing: CONFIG.bookingUrl,
-        investment: CONFIG.investmentUrl
-      };
-      if (urls[action]) window.location.href = urls[action];
-    });
-  });
+    const loading = addMessage('Thinking…', 'assistant loading');
 
-  // Enter submits naturally through the form. Shift+Enter is not needed for this single-line input.
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, history })
+      });
+
+      let data = {};
+      try { data = await response.json(); } catch {}
+
+      if (!response.ok) {
+        throw new Error(data.error || `Request failed (${response.status})`);
+      }
+
+      const reply = data.reply || 'I’m sorry, I could not create a response.';
+      loading.textContent = '';
+      linkifyApprovedUrls(loading, reply);
+      loading.classList.remove('loading');
+
+      history.push({ role: 'user', text: message });
+      history.push({ role: 'assistant', text: reply });
+      if (history.length > 12) history.splice(0, history.length - 12);
+    } catch (error) {
+      loading.textContent = `The AI connection failed: ${error.message}`;
+      loading.classList.remove('loading');
+    } finally {
+      input.disabled = false;
+      input.focus();
+    }
+  });
 })();

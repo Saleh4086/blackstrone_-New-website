@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width,initial-scale=1" name="viewport"/>
+  <title>Blackstone Admin Tools</title>
+  <meta name="robots" content="noindex,nofollow,noarchive"/>
+  <meta name="description" content="Private Blackstone administrative launcher."/>
+  <meta name="theme-color" content="#0b0d12"/>
+  <link href="assets/site.css" rel="stylesheet"/>
+  <style>
+    .admin-shell{min-height:70vh;background:#0b0d12;padding:72px 20px 90px}
+    .admin-wrap{max-width:1120px;margin:0 auto}
+    .admin-head{max-width:760px;margin-bottom:34px}
+    .admin-head .eyebrow{color:#caa95e}
+    .admin-head h1{color:#fff;margin:.3rem 0 .75rem;font-size:clamp(38px,6vw,64px)}
+    .admin-head p{color:#c8cbd1;font-size:18px;line-height:1.65}
+    .admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+    .admin-card{display:flex;flex-direction:column;min-height:210px;padding:24px;border:1px solid rgba(202,169,94,.35);background:linear-gradient(180deg,#151820,#0e1016);border-radius:14px;text-decoration:none;box-shadow:0 18px 42px rgba(0,0,0,.18);transition:.18s ease}
+    .admin-card:hover{transform:translateY(-2px);border-color:#caa95e}
+    .admin-card .tag{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#caa95e;font-weight:700}
+    .admin-card h2{color:#fff;font-size:25px;margin:12px 0 8px}
+    .admin-card p{color:#b9bdc6;line-height:1.55;margin:0 0 22px}
+    .admin-card .open{margin-top:auto;color:#e0c278;font-weight:700}
+    .admin-note{margin-top:28px;padding:18px 20px;border-left:3px solid #caa95e;background:#14171e;color:#c8cbd1;line-height:1.55}
+  </style>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html"><img alt="Blackstone Signature Properties &amp; Investments" decoding="async" src="assets/logo.png"/></a>
+  <button class="menu-toggle">MENU</button>
+  <nav>
+    <a href="index.html">Website Home</a>
+    <a href="properties.html">Properties</a>
+    <a href="property-management.html">Property Management</a>
+    <a class="nav-cta" href="contact.html">Contact</a>
+  </nav>
+</header>
+
+<main class="admin-shell">
+  <div class="admin-wrap">
+    <div class="admin-head">
+      <span class="eyebrow">Private Blackstone Workspace</span>
+      <h1>Admin Tools</h1>
+      <p>One secure launch point for the Blackstone systems you use day to day. Each application remains separate, so this page does not merge or alter any database or app.</p>
+    </div>
+
+    <div class="admin-grid">
+      <a class="admin-card" href="https://crm.blackstonesignatureproperties.com/" rel="noopener" target="_blank">
+        <span class="tag">CRM</span><h2>Blackstone CRM</h2>
+        <p>Leads, contacts, properties, drip campaigns, calls, texts and voicemail.</p>
+        <span class="open">Open CRM →</span>
+      </a>
+
+      <a class="admin-card" href="https://os.blackstonesignatureproperties.com/" rel="noopener" target="_blank">
+        <span class="tag">Operations</span><h2>Property OS / Flip Analyzer</h2>
+        <p>Property management, receipts, repairs, owner invoices, projects and investment analysis.</p>
+        <span class="open">Open Property OS →</span>
+      </a>
+
+      <a class="admin-card" href="https://transactions.blackstonesignatureproperties.com/" rel="noopener" target="_blank">
+        <span class="tag">Brokerage</span><h2>Transaction &amp; Commission Portal</h2>
+        <p>Transaction files, documents, commissions, demands, agent access and archives.</p>
+        <span class="open">Open Transaction Portal →</span>
+      </a>
+
+      <a class="admin-card" href="listing-manager.html">
+        <span class="tag">Website</span><h2>Website Listing Manager</h2>
+        <p>Open the existing Blackstone website property/listing management page.</p>
+        <span class="open">Open Listing Manager →</span>
+      </a>
+
+      <a class="admin-card" href="https://digital-card.gharibyar61.workers.dev/" rel="noopener" target="_blank">
+        <span class="tag">Marketing</span><h2>Digital Business Card</h2>
+        <p>Open the Blackstone digital business card and lead-capture experience.</p>
+        <span class="open">Open Digital Card →</span>
+      </a>
+
+      <a class="admin-card" href="ai-tools.html">
+        <span class="tag">Website</span><h2>Website AI Tools</h2>
+        <p>Open the existing Blackstone website AI and internal utility page.</p>
+        <span class="open">Open AI Tools →</span>
+      </a>
+    </div>
+
+    <div class="admin-note">
+      <strong>Protected access:</strong> this page and the website Listing Manager are protected by the website Worker. Set the Cloudflare secret <code>ADMIN_HUB_PASSWORD</code>. The username defaults to <strong>blackstone</strong> unless you also set <code>ADMIN_HUB_USERNAME</code>.
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div><img alt="Blackstone Signature Properties &amp; Investments" class="footer-logo" decoding="async" loading="lazy" src="assets/logo.png"/></div>
+      <div><h4>Admin</h4><a href="admin-hub.html">Admin Tools</a><br/><a href="index.html">Public Website</a></div>
+      <div><h4>Contact</h4><p>Sal Gharibyar · Broker / Owner<br/>DRE #01418692<br/>(925) 722-5144<br/>gharibyar61@gmail.com<br/>Serving the East Bay</p></div>
+    </div>
+  </div>
+</footer>
+<script src="assets/site.js"></script>
+</body>
+</html>

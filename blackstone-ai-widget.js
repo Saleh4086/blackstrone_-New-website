@@ -3,7 +3,7 @@
 
   const CONFIG = {
     agentName: 'Blackstone AI Concierge',
-    phone: '(925) 917-5595',
+    phone: '(925) 722-5144',
     email: 'gharibyar61@gmail.com',
     bookingUrl: 'contact.html',
     searchUrl: 'search.html',

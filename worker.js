@@ -26,7 +26,7 @@ Rules:
 8. Route the conversation naturally for buyers, sellers, landlords, tenants, investors, mortgage questions, neighborhoods, inspections, escrow, repairs, and property-management needs.
 9. When current public information would improve accuracy, use Google Search grounding. Clearly distinguish general educational information from property-specific advice.
 10. Never claim access to private MLS data, private CRM records, confidential client information, or a property inspection unless that information was provided in the conversation.
-11. When the visitor appears ready to act, invite them to contact Sal at (925) 917-5595 or use the appropriate Blackstone website form.
+11. When the visitor appears ready to act, invite them to contact Sal at (925) 722-5144 or use the appropriate Blackstone website form.
 `;
 
 const JSON_HEADERS = {
@@ -372,7 +372,7 @@ function directAnswer(message) {
   }
 
   if (/\b(phone|call|contact sal|sal's number|broker number)\b/.test(text)) {
-    return "You can contact Sal Gharibyar, Broker/Owner, at (925) 917-5595.";
+    return "You can contact Sal Gharibyar, Broker/Owner, at (925) 722-5144.";
   }
 
   if (/\b(property management fee|management fee|lease.?up fee|renewal fee)\b/.test(text)) {
@@ -788,9 +788,69 @@ async function handleLeadCapture(request, env) {
   }
 }
 
+
+function adminUnauthorized(message = "Authentication required.") {
+  return new Response(message, {
+    status: 401,
+    headers: {
+      "WWW-Authenticate": 'Basic realm="Blackstone Admin", charset="UTF-8"',
+      "Cache-Control": "no-store"
+    }
+  });
+}
+
+function adminHubAuthorized(request, env) {
+  const expectedPassword = String(env?.ADMIN_HUB_PASSWORD || "");
+  if (!expectedPassword) return { ok: false, missing: true };
+
+  const expectedUsername = String(env?.ADMIN_HUB_USERNAME || "blackstone");
+  const auth = request.headers.get("Authorization") || "";
+  if (!auth.startsWith("Basic ")) return { ok: false };
+
+  try {
+    const decoded = atob(auth.slice(6));
+    const split = decoded.indexOf(":");
+    if (split < 0) return { ok: false };
+    const username = decoded.slice(0, split);
+    const password = decoded.slice(split + 1);
+    return { ok: username === expectedUsername && password === expectedPassword };
+  } catch {
+    return { ok: false };
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    if (
+      url.pathname === "/admin-hub.html" ||
+      url.pathname === "/admin-hub" ||
+      url.pathname === "/listing-manager.html"
+    ) {
+      const auth = adminHubAuthorized(request, env);
+
+      if (auth.missing) {
+        return new Response(
+          "Blackstone Admin Hub is locked. Add the Cloudflare secret ADMIN_HUB_PASSWORD before using this page.",
+          { status: 503, headers: { "Cache-Control": "no-store" } }
+        );
+      }
+
+      if (!auth.ok) return adminUnauthorized();
+
+      const protectedAsset = await env.ASSETS.fetch(request);
+      const headers = new Headers(protectedAsset.headers);
+      headers.set("Cache-Control", "private, no-store");
+      headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+
+      return new Response(protectedAsset.body, {
+        status: protectedAsset.status,
+        statusText: protectedAsset.statusText,
+        headers
+      });
+    }
+
 
     if (url.pathname === "/api/leads" || url.pathname === "/api/leads/") {
       return handleLeadCapture(request, env);

@@ -664,7 +664,15 @@ function buildLeadPayload(input, requestUrl) {
   const email = cleanLeadText(input?.email || fields.email, 320).toLowerCase();
   const phone = cleanLeadText(input?.phone || fields.phone || fields.mobile, 80);
   const interest = cleanLeadText(input?.lead_type || fields.lead_type || fields.interest || fields.service, 120);
-  const leadType = normalizeLeadType(interest, input?.page || url.pathname);
+  // Repair forms already send repair_category / issue_description. Detect those fields
+  // explicitly so the request is always copied to Property OS even if lead_type is blank.
+  const isRepairSubmission = Boolean(
+    input?.repair_category || fields.repair_category || fields.category ||
+    input?.issue_description || fields.issue_description || fields.repair_details
+  );
+  const leadType = isRepairSubmission
+    ? "tenant_repair"
+    : normalizeLeadType(interest, input?.page || url.pathname);
   const propertyAddress = cleanLeadText(
     input?.property_address || fields.property_address || fields.address || fields.property || fields.property_interested_in,
     400

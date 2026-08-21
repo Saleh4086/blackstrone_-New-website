@@ -753,6 +753,39 @@ async function insertSupabaseLead(payload, env) {
   return Array.isArray(data) ? data[0] : data;
 }
 
+const BLACKSTONE_REPAIR_OS_ENDPOINT = "https://os.blackstonesignatureproperties.com/api/website-repair-intake";
+const BLACKSTONE_REPAIR_BRIDGE_KEY = "f18CbMik5PDWArGxOgnUWU_PkchVp9rOFE3DPZPllIk";
+
+async function forwardTenantRepairToPropertyOS(input, savedLead) {
+  try {
+    const fields = input?.fields && typeof input.fields === "object" ? input.fields : {};
+    const payload = {
+      externalSourceId: String(savedLead?.id || input?.submission_id || crypto.randomUUID()),
+      tenantName: cleanLeadText(input?.name || fields.name || fields.full_name, 200),
+      tenantEmail: cleanLeadText(input?.email || fields.email, 320).toLowerCase(),
+      tenantPhone: cleanLeadText(input?.phone || fields.phone || fields.mobile, 80),
+      propertyAddress: cleanLeadText(input?.property_address || fields.property_address || fields.address || fields.property, 400),
+      repairCategory: cleanLeadText(input?.repair_category || fields.repair_category || fields.category, 120),
+      issueDescription: cleanLeadText(input?.issue_description || fields.issue_description || fields.repair_details || fields.message || fields.notes, 3000),
+      source: "Blackstone Website Repair Request"
+    };
+    if (!payload.propertyAddress || !payload.issueDescription) return { ok:false, skipped:true };
+    const response = await fetch(BLACKSTONE_REPAIR_OS_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Blackstone-Repair-Bridge": BLACKSTONE_REPAIR_BRIDGE_KEY
+      },
+      body: JSON.stringify(payload)
+    });
+    const body = await response.json().catch(() => ({}));
+    return { ok: response.ok && body?.ok, status: response.status, ...body };
+  } catch (error) {
+    console.error("Property OS repair bridge error:", error);
+    return { ok:false, error:error?.message || String(error) };
+  }
+}
+
 async function handleLeadCapture(request, env) {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: JSON_HEADERS });
@@ -777,10 +810,20 @@ async function handleLeadCapture(request, env) {
 
   try {
     const savedLead = await insertSupabaseLead(payload, env);
+
+    // Add-on only: tenant repair requests are copied to Property OS AFTER CRM save succeeds.
+    // Property OS delivery is intentionally non-blocking for the website/CRM chain.
+    let repair_os = null;
+    if (payload.lead_type === "tenant_repair") {
+      repair_os = await forwardTenantRepairToPropertyOS(input, savedLead);
+      if (!repair_os?.ok) console.error("Repair saved to CRM but Property OS copy did not complete:", repair_os);
+    }
+
     return json({
       ok: true,
       message: "Thank you. Your request was received and Sal will follow up shortly.",
-      lead_id: savedLead?.id || null
+      lead_id: savedLead?.id || null,
+      ...(payload.lead_type === "tenant_repair" ? { repair_os_received: Boolean(repair_os?.ok) } : {})
     });
   } catch (error) {
     console.error("CRM lead capture error:", error);

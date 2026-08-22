@@ -727,7 +727,9 @@ function buildLeadPayload(input, requestUrl) {
 }
 
 async function insertSupabaseLead(payload, env) {
-  const supabaseUrl = String(env?.SUPABASE_URL || "").replace(/\/$/, "");
+  // CRM project URL is fixed here so a Worker SUPABASE_URL belonging to another
+  // Blackstone app cannot accidentally route website leads away from the CRM.
+  const supabaseUrl = "https://omzplyoawtnxqbuefsuh.supabase.co";
   const supabaseKey = env?.SUPABASE_SERVICE_ROLE_KEY || env?.SUPABASE_ANON_KEY || env?.SUPABASE_PUBLISHABLE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {

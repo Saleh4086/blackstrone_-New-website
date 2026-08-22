@@ -763,7 +763,10 @@ async function insertSupabaseLead(payload, env) {
   return Array.isArray(data) ? data[0] : data;
 }
 
-const BLACKSTONE_REPAIR_OS_ENDPOINT = "https://os.blackstonesignatureproperties.com/api/website-repair-intake";
+const BLACKSTONE_REPAIR_OS_ENDPOINTS = [
+  "https://os.blackstonesignatureproperties.com/api/website-repair-intake",
+  "https://house--flip.pages.dev/api/website-repair-intake"
+];
 const BLACKSTONE_REPAIR_BRIDGE_KEY = "f18CbMik5PDWArGxOgnUWU_PkchVp9rOFE3DPZPllIk";
 
 async function forwardTenantRepairToPropertyOS(input, savedLead) {
@@ -780,18 +783,25 @@ async function forwardTenantRepairToPropertyOS(input, savedLead) {
       source: "Blackstone Website Repair Request"
     };
     if (!payload.propertyAddress || !payload.issueDescription) return { ok:false, skipped:true };
-    const response = await fetch(BLACKSTONE_REPAIR_OS_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Blackstone-Repair-Bridge": BLACKSTONE_REPAIR_BRIDGE_KEY
-      },
-      body: JSON.stringify(payload)
-    });
-    const body = await response.json().catch(() => ({}));
-    return { ok: response.ok && body?.ok, status: response.status, ...body };
+    let last={ok:false,error:"Repair inbox unavailable"};
+    for (const endpoint of BLACKSTONE_REPAIR_OS_ENDPOINTS) {
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Blackstone-Repair-Bridge": BLACKSTONE_REPAIR_BRIDGE_KEY
+          },
+          body: JSON.stringify(payload)
+        });
+        const body = await response.json().catch(() => ({}));
+        last = { ok: response.ok && body?.ok, status: response.status, endpoint, ...body };
+        if (last.ok) return last;
+      } catch (error) { last={ok:false,endpoint,error:error?.message||String(error)}; }
+    }
+    return last;
   } catch (error) {
-    console.error("Property OS repair bridge error:", error);
+    console.error("Property OS repair inbox error:", error);
     return { ok:false, error:error?.message || String(error) };
   }
 }

@@ -319,7 +319,12 @@ if(liveBtn){
 
       try{
         const repairPath = window.location.pathname.replace(/\/+$/, '');
-        const isRepair = repairPath === '/repair-request' || repairPath === '/repair-request.html';
+        // 64D: identify the repair form by its actual fields, not only by URL.
+        // This keeps working if Cloudflare serves the page at /repair-request,
+        // /repair-request.html, a preview route, or another clean URL.
+        const isRepair = repairPath === '/repair-request' ||
+          repairPath === '/repair-request.html' ||
+          Boolean(fields.property_address && fields.repair_category && fields.issue_description);
         const repairPayload = {
           name: fields.name || '', email: fields.email || '', phone: fields.phone || '',
           propertyAddress: fields.property_address || '', area: fields.repair_category || 'Other',

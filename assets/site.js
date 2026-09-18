@@ -318,10 +318,18 @@ if(liveBtn){
       };
 
       try{
-        const response = await fetch('/api/leads', {
+        const isRepair = window.location.pathname.endsWith('/repair-request.html') || window.location.pathname === '/repair-request.html';
+        const repairPayload = {
+          name: fields.name || '', email: fields.email || '', phone: fields.phone || '',
+          propertyAddress: fields.property_address || '', area: fields.repair_category || 'Other',
+          issue: fields.issue_description || '', priority: fields.priority || 'Normal'
+        };
+        const response = await fetch(isRepair
+          ? 'https://brokerage-os-master.pages.dev/api/website-repair-intake'
+          : '/api/leads', {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
-          body: JSON.stringify(payload)
+          body: JSON.stringify(isRepair ? repairPayload : payload)
         });
         const result = await response.json().catch(()=>({}));
         if(!response.ok) throw new Error(result.error || `Request failed (${response.status})`);

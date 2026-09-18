@@ -806,6 +806,37 @@ async function forwardTenantRepairToPropertyOS(input, savedLead) {
   }
 }
 
+const MASTER_REPAIR_INTAKE_URL = "https://brokerage-os-master.pages.dev/api/website-repair-intake";
+
+async function handleMasterRepairProxy(request) {
+  if (request.method === "GET") {
+    return json({ ok: true, stage: "64G", route: "website-to-master-repair-proxy" });
+  }
+  if (request.method !== "POST") {
+    return json({ ok: false, error: "method_not_allowed" }, 405);
+  }
+
+  let payload;
+  try { payload = await request.json(); }
+  catch (_) { return json({ ok: false, error: "invalid_json" }, 400); }
+
+  try {
+    const upstream = await fetch(MASTER_REPAIR_INTAKE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const raw = await upstream.text();
+    let data;
+    try { data = raw ? JSON.parse(raw) : {}; }
+    catch (_) { data = { ok: false, error: "invalid_master_response" }; }
+    return json(data, upstream.status);
+  } catch (error) {
+    console.error("Master repair proxy error:", error);
+    return json({ ok: false, error: "master_intake_unreachable" }, 502);
+  }
+}
+
 async function handleLeadCapture(request, env) {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: JSON_HEADERS });
@@ -914,6 +945,10 @@ export default {
       });
     }
 
+
+    if (url.pathname === "/api/master-repair" || url.pathname === "/api/master-repair/") {
+      return handleMasterRepairProxy(request);
+    }
 
     if (url.pathname === "/api/leads" || url.pathname === "/api/leads/") {
       return handleLeadCapture(request, env);
